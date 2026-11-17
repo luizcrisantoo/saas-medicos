@@ -17,6 +17,13 @@ comentario, INSERT de dado de referencia, SET ROLE saas_owner, search_path); tod
 exige aprovacao. Detectores nomeados (funcao, privilegio, dono, papel, row_security,
 set_config, COPY, LOAD, extensao, visao...) rodam tambem dentro de literais e corpos $$.
 
+Tentativa 3 (ADR-0040, itens 2a a 2d e 8): GRANT sem aprovacao so em tabela classificada
+como nao sensivel em tabelas-sensiveis.txt (ao lado deste script; tabela nova e sensivel por
+padrao), REVOKE passa; DROP INDEX e DROP CONSTRAINT exigem aprovacao; CREATE TABLE em saas.*
+sem ENABLE e FORCE ROW LEVEL SECURITY na mesma migracao e recusado (inclusive LIKE e CTAS);
+SET/DROP DEFAULT em coluna de tenant, chave, storage ou status exige aprovacao. No CI este
+script e a lista vem do commit da branch base, nunca do PR.
+
 Uma migracao fora da lista so passa se o par (sha256 do conteudo exato, nome do
 arquivo) estiver em ARQUIVO_APROVACOES, no formato do sha256sum. Linhas que
 comecam com '#' sao comentarios (a justificativa da aprovacao).
@@ -497,6 +504,29 @@ def _conteudo_comum(st):
     return None
 
 
+# ADR-0040 item 2d: SET/DROP DEFAULT sem aprovacao so em coluna que nao seja de tenant
+# (clinica_id e afins), chave, storage ou status. Na duvida (nome casa com o padrao), recusa.
+PADRAO_COLUNA_PROTEGIDA = re.compile(
+    r"(^id$|_id$|^id_|clinica|tenant|organiza|empresa|conta|dono|owner|usuario|papel|role|"
+    r"chave|key|pk|fk|uuid|hash|token|codigo|segredo|secret|"
+    r"storage|bucket|objeto|caminho|path|arquivo|s3|url|uri|"
+    r"status|situacao|estado|fase|etapa|ativo|ligad|revogad|aprovad|verificad)")
+
+
+def _default_em_coluna(acao):
+    """Para ALTER [COLUMN] c SET DEFAULT ... / DROP DEFAULT: (True, nome da coluna); senao (False, None)."""
+    a = [_kw(t) for t in acao]
+    if not a or a[0] != "alter":
+        return False, None
+    j = 2 if len(a) > 1 and a[1] == "column" else 1
+    if j >= len(acao) or acao[j].tipo not in ("word", "qident"):
+        return False, None
+    resto = a[j + 1:]
+    if resto[:2] == ["set", "default"] or resto == ["drop", "default"]:
+        return True, acao[j].valor
+    return False, None
+
+
 def _acao_alter_table(acao):
     """Acao de ALTER TABLE permitida sem aprovacao (so cria ou reforca)."""
     if not acao:
@@ -516,7 +546,7 @@ def _acao_alter_table(acao):
         if resto[:3] == ["set", "not", "null"] and len(resto) == 3:
             return True
         if resto[:2] == ["set", "default"] or resto == ["drop", "default"]:
-            return True
+            return False  # decidido em _default_protegido (precisa do nome da coluna)
         if (resto[:1] == ["type"] or resto[:3] == ["set", "data", "type"]) and "using" not in resto:
             # sem USING: conversao por cast, preserva o dado (USING reescreve, ex.: clinica_id)
             return True
@@ -528,6 +558,42 @@ def _acao_alter_table(acao):
 # RLS), TRIGGER, ALL (inclui os dois), PUBLIC, papel, WITH GRANT OPTION, GRANTED BY, CASCADE,
 # EXECUTE em funcao, ALL TABLES IN SCHEMA e qualquer objeto fora de saas.* exigem aprovacao.
 PAPEIS_DA_APLICACAO = {"saas_app", "saas_jobs", "saas_auth"}
+
+# Classificacao das tabelas (ADR-0040 item 2a): lida do arquivo ao lado deste script, isto e,
+# no CI, da copia da branch base (item 8), nunca da copia do PR.
+ARQUIVO_CLASSIFICACAO = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tabelas-sensiveis.txt")
+# Sensiveis no minimo, qualquer que seja o conteudo da lista (spec 3.5): uma linha
+# "nao_sensivel paciente" na lista nao libera GRANT em saas.paciente.
+SENSIVEIS_MINIMAS = frozenset({
+    "paciente", "paciente_clinica", "encaminhamento", "vaga_encaminhamento", "agendamento",
+    "contrarreferencia", "envio_notificacao", "evento_auditoria", "historico_status_encaminhamento",
+    "link_paciente", "sessao", "desafio_encaminhador", "consentimento", "anexo_encaminhamento",
+    "usuario", "usuario_clinica", "profissional_clinica", "flag_clinica",
+})
+TABELAS_SENSIVEIS = set(SENSIVEIS_MINIMAS)
+TABELAS_NAO_SENSIVEIS = set()
+_NOME_TABELA = re.compile(r"^[a-z_][a-z0-9_]*$")
+
+
+def le_classificacao(caminho):
+    """Linhas 'sensivel <tabela>' ou 'nao_sensivel <tabela>'; '#' inicia comentario."""
+    sens, nao = set(), set()
+    if not os.path.exists(caminho):
+        print("guarda: classificacao de tabelas ausente (%s): toda tabela e sensivel" % caminho)
+        return sens, nao
+    with open(caminho, "r", encoding="utf-8") as f:
+        for num, linha in enumerate(f, 1):
+            linha = linha.split("#", 1)[0].strip()
+            if not linha:
+                continue
+            partes = linha.split()
+            if len(partes) != 2 or partes[0] not in ("sensivel", "nao_sensivel") \
+                    or not _NOME_TABELA.match(partes[1]):
+                raise ValueError("linha %d invalida ('sensivel <tabela>' ou 'nao_sensivel <tabela>')" % num)
+            (sens if partes[0] == "sensivel" else nao).add(partes[1])
+    if sens & nao:
+        raise ValueError("tabela classificada nas duas classes: %s" % ", ".join(sorted(sens & nao)))
+    return sens, nao
 PRIVILEGIOS_DE_TABELA = {"select", "insert", "update", "delete", "references"}
 
 
@@ -566,6 +632,18 @@ def _grant_fora_da_lista(st):
         partes, fim = _nome_em(obj, 0)
         if partes is None or fim != len(obj) or len(partes) != 2 or partes[0] != SCHEMA_PERMITIDO:
             return "%s em objeto fora de saas.* (use o nome qualificado saas.tabela)" % k[0].upper()
+        # ADR-0040 item 2a: GRANT sem aprovacao so em tabela classificada como nao sensivel na
+        # lista da branch base; tabela sensivel ou ainda nao classificada exige aprovacao.
+        # REVOKE so reduz acesso: passa em qualquer tabela de saas.*.
+        if k[0] == "grant" and any(t.tipo == "qident" for t in obj):
+            # o analisador guarda nomes entre aspas em minusculas: "Especialidade" nao e a
+            # tabela especialidade, e nao da para saber qual e
+            return "GRANT em tabela com nome entre aspas (saas.%s), exige aprovacao" % partes[1]
+        if k[0] == "grant" and partes[1] not in TABELAS_NAO_SENSIVEIS:
+            if partes[1] in TABELAS_SENSIVEIS:
+                return "GRANT em tabela sensivel (saas.%s), exige aprovacao" % partes[1]
+            return "GRANT em tabela nao classificada (saas.%s), sensivel por padrao ate entrar em %s" % (
+                partes[1], os.path.basename(ARQUIVO_CLASSIFICACAO))
     fim = n
     if k[0] == "revoke" and k[-1] == "restrict":
         fim = n - 1
@@ -669,6 +747,12 @@ def _fora_da_lista(st):
             if not _alvo_saas(partes):
                 return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
             for acao in _partes_virgula(st, j, n):
+                eh_default, coluna = _default_em_coluna(acao)
+                if eh_default:
+                    if PADRAO_COLUNA_PROTEGIDA.search(coluna.lower()):
+                        return ("SET/DROP DEFAULT em coluna de tenant, chave, storage ou status "
+                                "(%s) exige aprovacao" % coluna)
+                    continue
                 if not _acao_alter_table(acao):
                     d = " ".join(x.valor.upper() for x in acao[:4] if x.tipo == "word") or "?"
                     return motivo + ": acao de ALTER TABLE fora da lista (%s)" % d
@@ -694,16 +778,10 @@ def _fora_da_lista(st):
             return motivo
         return motivo
 
+    # DROP INDEX e DROP CONSTRAINT exigem aprovacao (ADR-0040 item 2b): indice unico e
+    # restricao sao regra de negocio ou de seguranca.
     if w0 == "drop" and n > 1 and k[1] == "index":
-        j = _pula(st, 2, "concurrently")
-        j = _pula(st, j, "if", "exists")
-        for item in _partes_virgula(st, j, n):
-            if item and _kw(item[-1]) == "restrict":
-                item = item[:-1]
-            partes, fim = _nome_em(item, 0)
-            if not _alvo_saas(partes) or fim != len(item):
-                return motivo
-        return bloqueio
+        return "DROP INDEX exige aprovacao (indice unico e regra de negocio/seguranca)"
 
     if w0 == "comment" and n > 2 and k[1] == "on" and k[2] in ("table", "column", "index", "sequence", "type"):
         partes, j = _nome_em(st, 3)
@@ -1002,6 +1080,66 @@ def _reserva(texto, linha, achados):
             achados.append((linha, motivo + " (literal nao analisavel)"))
 
 
+def _tabela_criada(st):
+    """Nome da tabela de saas.* (ou sem schema) criada por um CREATE ... TABLE de qualquer
+    forma (colunas, LIKE, AS SELECT, PARTITION OF, OF tipo, TEMP, UNLOGGED); senao None."""
+    k = [_kw(t) for t in st]
+    if not k or k[0] != "create":
+        return None
+    j = 1
+    while j < len(k) and k[j] in ("or", "replace", "global", "local", "temp", "temporary", "unlogged"):
+        j += 1
+    if j >= len(k) or k[j] != "table":
+        return None
+    j = _pula(st, j + 1, "if", "not", "exists")
+    partes, fim = _nome_em(st, j)
+    if partes is None:
+        return None
+    if len(partes) == 1 or (len(partes) == 2 and partes[0] == SCHEMA_PERMITIDO):
+        if fim >= 1 and st[fim - 1].tipo == "qident":
+            # nome entre aspas e guardado em minusculas: "N" e n seriam confundidos no
+            # confronto com o ALTER TABLE; marca como sem RLS conferivel
+            return '"%s"' % partes[-1]
+        return partes[-1]
+    return None
+
+
+def _rls_ligada(st):
+    """Tabelas (nome sem schema) e acoes de RLS de um ALTER TABLE: (nome, {'enable','force'})."""
+    k = [_kw(t) for t in st]
+    if len(k) < 3 or k[0] != "alter" or k[1] != "table":
+        return None, set()
+    j = _pula(st, 2, "if", "exists")
+    j = _pula(st, j, "only")
+    partes, j = _nome_em(st, j)
+    if not _alvo_saas(partes):
+        return None, set()
+    acoes = set()
+    for acao in _partes_virgula(st, j, len(st)):
+        a = [_kw(t) for t in acao]
+        if a in (["enable", "row", "level", "security"], ["force", "row", "level", "security"]):
+            acoes.add(a[0])
+    return partes[-1], acoes
+
+
+def _confere_rls_das_tabelas_novas(stmts, achados):
+    """ADR-0040 item 2c: toda tabela criada em saas.* tem ENABLE e FORCE ROW LEVEL SECURITY
+    em comando de primeiro nivel posterior, na mesma migracao."""
+    for i, st in enumerate(stmts):
+        nome = _tabela_criada(st)
+        if nome is None:
+            continue
+        visto = set()
+        for depois in stmts[i + 1:]:
+            alvo, acoes = _rls_ligada(depois)
+            if alvo == nome:
+                visto |= acoes
+        falta = {"enable", "force"} - visto
+        if falta:
+            achados.append((st[0].linha, "CREATE TABLE saas.%s sem %s ROW LEVEL SECURITY na mesma migracao" % (
+                nome, " e ".join(x.upper() for x in sorted(falta)))))
+
+
 def analisa(sql, aninhado=False, linha_base=0, profundidade=0, achados=None):
     if achados is None:
         achados = []
@@ -1023,12 +1161,15 @@ def analisa(sql, aninhado=False, linha_base=0, profundidade=0, achados=None):
     else:
         for t in toks:
             t.linha += linha_base
-    for st in _divide(toks):
+    stmts = _divide(toks)
+    for st in stmts:
         _regras_comando(st, aninhado, achados)
         if not aninhado:
             motivo = _fora_da_lista(st)
             if motivo:
                 achados.append((st[0].linha, motivo))
+    if not aninhado:
+        _confere_rls_das_tabelas_novas(stmts, achados)
     for t in toks:
         if t.tipo == "str" and t.valor.strip():
             analisa(t.valor, True, t.linha, profundidade + 1, achados)
@@ -1095,6 +1236,13 @@ def main(argv):
     except (ValueError, UnicodeDecodeError) as e:
         print("guarda: arquivo de aprovacoes invalido: %s" % e, file=sys.stderr)
         return 2
+    try:
+        sens, nao = le_classificacao(ARQUIVO_CLASSIFICACAO)
+    except (ValueError, UnicodeDecodeError) as e:
+        print("guarda: classificacao de tabelas invalida: %s" % e, file=sys.stderr)
+        return 2
+    TABELAS_SENSIVEIS.update(sens)
+    TABELAS_NAO_SENSIVEIS.update(nao - SENSIVEIS_MINIMAS)
 
     arquivos = []
     for raiz, dirs, nomes in os.walk(diretorio):

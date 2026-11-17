@@ -38,6 +38,11 @@ jobs:
         env:
           TESTCONTAINERS_RYUK_DISABLED: "true"
 
+  # A guarda que roda aqui nao vem do PR (ADR-0040, item 8): scripts/ci (guarda e lista de
+  # tabelas sensiveis) sai de um checkout separado do commit da branch base, em .guarda-base/,
+  # e confere as migracoes e as aprovacoes do PR (checkout padrao). Um PR que afrouxa a guarda
+  # ou reclassifica uma tabela so passa a valer depois de mergeado (com revisao do dono).
+  # Em push na principal, a base e o proprio commit (ja revisado no PR).
   guarda-migracao:
     name: guarda de migracao (R-07, R-08)
     runs-on: ubuntu-24.04
@@ -45,13 +50,21 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: Checkout do PR (migracoes e aprovacoes)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: Guarda sobre db/migration
-        run: scripts/ci/guarda-migracao.sh src/main/resources/db/migration src/main/resources/db/aprovacoes.sha256
-      - name: Guarda sobre db/reversao
-        run: scripts/ci/guarda-migracao.sh src/main/resources/db/reversao src/main/resources/db/aprovacoes.sha256
+      - name: Checkout da branch base (guarda e lista de tabelas sensiveis)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: .guarda-base
+          sparse-checkout: scripts/ci
+          persist-credentials: false
+      - name: Guarda da base sobre db/migration do PR
+        run: .guarda-base/scripts/ci/guarda-migracao.sh src/main/resources/db/migration src/main/resources/db/aprovacoes.sha256
+      - name: Guarda da base sobre db/reversao do PR
+        run: .guarda-base/scripts/ci/guarda-migracao.sh src/main/resources/db/reversao src/main/resources/db/aprovacoes.sha256
 
   sast:
     name: SAST (CodeQL)

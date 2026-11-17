@@ -422,6 +422,59 @@ class GuardaMigracaoTest {
                         "COMMENT ON FUNCTION saas.f() IS 'x';"),
                 Arguments.of("drop index cascade",
                         "DROP INDEX saas.i CASCADE;"),
+                Arguments.of("drop index simples",
+                        "DROP INDEX saas.paciente_cpf_hash_idx;"),
+                Arguments.of("drop index concurrently if exists",
+                        "drop index concurrently if exists saas.link_paciente_codigo_uniq;"),
+                Arguments.of("drop constraint",
+                        "ALTER TABLE saas.agendamento DROP CONSTRAINT agendamento_sem_sobreposicao;"),
+                Arguments.of("drop constraint junto de add",
+                        "ALTER TABLE saas.paciente ADD COLUMN x int, DROP CONSTRAINT paciente_ck;"),
+                Arguments.of("grant em tabela sensivel paciente",
+                        "GRANT SELECT ON saas.paciente TO saas_app;"),
+                Arguments.of("grant de coluna em sessao",
+                        "GRANT SELECT (id) ON saas.sessao TO saas_jobs;"),
+                Arguments.of("grant em auditoria",
+                        "GRANT INSERT ON TABLE saas.evento_auditoria TO saas_auth;"),
+                Arguments.of("grant em flag",
+                        "GRANT UPDATE ON saas.flag_clinica TO saas_app;"),
+                Arguments.of("grant em usuario_clinica",
+                        "GRANT INSERT ON saas.usuario_clinica TO saas_app;"),
+                Arguments.of("grant sensivel escondida entre nao sensiveis",
+                        "GRANT SELECT ON saas.especialidade, saas.consentimento TO saas_app;"),
+                Arguments.of("grant em tabela nao classificada (nova)",
+                        "CREATE TABLE saas.nova (id int); ALTER TABLE saas.nova ENABLE ROW LEVEL SECURITY, "
+                                + "FORCE ROW LEVEL SECURITY; GRANT SELECT ON saas.nova TO saas_app;"),
+                Arguments.of("grant em nome entre aspas",
+                        "GRANT SELECT ON saas.\"Especialidade\" TO saas_app;"),
+                Arguments.of("create table sem rls",
+                        "CREATE TABLE saas.nova (id int);"),
+                Arguments.of("create table so com enable",
+                        "CREATE TABLE saas.nova (id int); ALTER TABLE saas.nova ENABLE ROW LEVEL SECURITY;"),
+                Arguments.of("create table so com force",
+                        "CREATE TABLE nova (id int); ALTER TABLE nova FORCE ROW LEVEL SECURITY;"),
+                Arguments.of("create table com rls em outra tabela",
+                        "CREATE TABLE saas.nova (id int); ALTER TABLE saas.outra ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;"),
+                Arguments.of("create table com rls antes do create",
+                        "ALTER TABLE saas.nova ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY; CREATE TABLE saas.nova (id int);"),
+                Arguments.of("create table like including all sem rls",
+                        "CREATE TABLE saas.copia (LIKE saas.paciente INCLUDING ALL);"),
+                Arguments.of("ctas sem rls",
+                        "CREATE TABLE saas.copia AS SELECT * FROM saas.paciente;"),
+                Arguments.of("create table entre aspas com rls em outra grafia",
+                        "CREATE TABLE saas.\"Nova\" (id int); ALTER TABLE saas.nova ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;"),
+                Arguments.of("set default em clinica_id",
+                        "ALTER TABLE saas.agendamento ALTER COLUMN clinica_id SET DEFAULT '00000000-0000-0000-0000-000000000001';"),
+                Arguments.of("drop default em clinica_id entre aspas",
+                        "ALTER TABLE saas.agendamento ALTER \"clinica_id\" DROP DEFAULT;"),
+                Arguments.of("set default em status",
+                        "ALTER TABLE saas.encaminhamento ALTER COLUMN status SET DEFAULT 'ACEITO';"),
+                Arguments.of("set default em chave de storage",
+                        "ALTER TABLE saas.anexo_encaminhamento ALTER COLUMN chave_storage SET DEFAULT 'x';"),
+                Arguments.of("set default em id",
+                        "ALTER TABLE saas.paciente ALTER COLUMN id SET DEFAULT gen_random_uuid();"),
+                Arguments.of("drop default em fk junto de add",
+                        "ALTER TABLE saas.paciente ADD COLUMN x int, ALTER COLUMN usuario_id DROP DEFAULT;"),
                 Arguments.of("index com expressao qualificada",
                         "CREATE INDEX i ON saas.x (saas.f(a));"),
                 Arguments.of("set_config app sem ponto aparente E",
@@ -525,21 +578,22 @@ class GuardaMigracaoTest {
             CREATE TABLE IF NOT EXISTS nota2 (id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY) WITH (fillfactor = 90);
             ALTER TABLE saas.nota ENABLE ROW LEVEL SECURITY;
             ALTER TABLE saas.nota FORCE ROW LEVEL SECURITY;
+            ALTER TABLE ONLY nota2 ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;
             CREATE INDEX nota_clinica_idx ON saas.nota (clinica_id);
             CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS nota_l ON ONLY saas.nota USING btree (lower(texto)) WHERE criado_em IS NOT NULL;
             ALTER TABLE saas.paciente ADD COLUMN apelido text, ADD CONSTRAINT apelido_ck CHECK (length(apelido) < 50) NOT VALID;
             ALTER TABLE paciente ALTER COLUMN apelido SET NOT NULL, ALTER apelido TYPE varchar(50);
             ALTER TABLE paciente ALTER COLUMN apelido SET DEFAULT '', VALIDATE CONSTRAINT apelido_ck;
             ALTER INDEX saas.nota_l RENAME TO nota_lower;
-            DROP INDEX IF EXISTS saas.nota_lower;
             CREATE TYPE saas.cor AS ENUM ('A', 'B');
             ALTER TYPE saas.cor ADD VALUE IF NOT EXISTS 'C' AFTER 'B';
             CREATE SEQUENCE saas.seq_x START 1;
             COMMENT ON TABLE saas.nota IS 'Notas da clinica';
             COMMENT ON COLUMN saas.nota.texto IS 'texto livre';
-            GRANT SELECT, INSERT ON saas.nota TO saas_app;
-            GRANT SELECT (id, texto), UPDATE (texto) ON TABLE saas.nota TO saas_jobs, saas_auth;
+            GRANT SELECT, INSERT ON saas.especialidade TO saas_app;
+            GRANT SELECT (id, nome), UPDATE (nome) ON TABLE saas.clinica TO saas_jobs, saas_auth;
             REVOKE DELETE ON saas.nota FROM saas_app;
+            REVOKE SELECT (cpf_hash) ON saas.paciente FROM saas_jobs;
             INSERT INTO saas.especialidade (id, nome) VALUES (gen_random_uuid(), 'Cardiologia'), (gen_random_uuid(), 'Pediatria') ON CONFLICT (nome) DO NOTHING;
             RESET ROLE;
             """;
@@ -549,6 +603,88 @@ class GuardaMigracaoTest {
         Resultado r = guarda(migracao("V9__limpa.sql", LIMPA), semAprovacoes());
         assertThat(r.codigo()).as(r.saida()).isZero();
         assertThat(r.saida()).contains("LIMPA");
+    }
+
+    static Stream<Arguments> controlesPositivos() {
+        return Stream.of(
+                Arguments.of("grant em tabela nao sensivel", "GRANT SELECT ON saas.especialidade TO saas_app;"),
+                Arguments.of("grant de coluna em tabela nao sensivel",
+                        "GRANT SELECT (id, nome) ON TABLE saas.clinica TO saas_app, saas_jobs;"),
+                Arguments.of("revoke em tabela sensivel", "REVOKE SELECT ON saas.paciente FROM saas_app;"),
+                Arguments.of("revoke all em tabela sensivel", "REVOKE ALL ON saas.sessao FROM saas_jobs;"),
+                Arguments.of("create table com enable e force",
+                        "CREATE TABLE saas.nova (id int); ALTER TABLE saas.nova ENABLE ROW LEVEL SECURITY; "
+                                + "ALTER TABLE nova FORCE ROW LEVEL SECURITY;"),
+                Arguments.of("create table like com enable e force",
+                        "CREATE TABLE saas.copia (LIKE saas.especialidade INCLUDING ALL); "
+                                + "ALTER TABLE ONLY saas.copia ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY;"),
+                Arguments.of("set default em coluna comum",
+                        "ALTER TABLE saas.paciente ALTER COLUMN apelido SET DEFAULT '';"));
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("controlesPositivos")
+    void controlePositivoPassaSemAprovacao(String caso, String sql) throws Exception {
+        Path dir = migracao("V9__x.sql", "SET ROLE saas_owner;\n" + sql + "\nRESET ROLE;\n");
+        Resultado r = guarda(dir, semAprovacoes());
+        assertThat(r.codigo()).as(caso + "\n" + r.saida()).isZero();
+    }
+
+    @Test
+    void todaTabelaDoRepositorioEstaClassificada() throws Exception {
+        // tabela nova e sensivel por padrao; este teste obriga a classifica-la (ADR-0040, 2a)
+        java.util.Set<String> classificadas = new java.util.HashSet<>();
+        for (String linha : Files.readAllLines(Path.of("scripts/ci/tabelas-sensiveis.txt"))) {
+            String l = linha.split("#", 2)[0].trim();
+            if (!l.isEmpty()) {
+                classificadas.add(l.split("\\s+")[1]);
+            }
+        }
+        java.util.regex.Pattern criar = java.util.regex.Pattern.compile(
+                "(?im)^\\s*CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(?:saas\\.)?([a-z_][a-z0-9_]*)");
+        try (Stream<Path> arqs = Files.list(Path.of("src/main/resources/db/migration"))) {
+            for (Path f : arqs.toList()) {
+                var m = criar.matcher(Files.readString(f));
+                while (m.find()) {
+                    assertThat(classificadas).as(f + ": tabela " + m.group(1) + " sem classificacao")
+                            .contains(m.group(1));
+                }
+            }
+        }
+    }
+
+    @Test
+    void sensivelMinimaNaoPodeSerReclassificadaNaLista() throws Exception {
+        // copia autocontida de scripts/ci com a lista adulterada: paciente continua sensivel
+        Path ci = Files.createDirectories(tmp.resolve("ci"));
+        for (String f : List.of("guarda-migracao.sh", "guarda_migracao.py")) {
+            Files.copy(Path.of("scripts/ci", f), ci.resolve(f));
+        }
+        Files.writeString(ci.resolve("tabelas-sensiveis.txt"), "nao_sensivel paciente\nnao_sensivel especialidade\n");
+        Path dir = migracao("V9__x.sql", "SET ROLE saas_owner;\nGRANT SELECT ON saas.paciente TO saas_app;\nRESET ROLE;\n");
+        Process p = new ProcessBuilder("bash", ci.resolve("guarda-migracao.sh").toString(), dir.toString(),
+                semAprovacoes().toString()).redirectErrorStream(true).start();
+        String saida = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        assertThat(p.waitFor(60, TimeUnit.SECONDS)).isTrue();
+        assertThat(p.exitValue()).as(saida).isEqualTo(1);
+        assertThat(saida).contains("tabela sensivel (saas.paciente)");
+        Files.writeString(ci.resolve("tabelas-sensiveis.txt"), "nao-sensivel especialidade\n");
+        p = new ProcessBuilder("bash", ci.resolve("guarda-migracao.sh").toString(), dir.toString(),
+                semAprovacoes().toString()).redirectErrorStream(true).start();
+        p.getInputStream().readAllBytes();
+        assertThat(p.waitFor(60, TimeUnit.SECONDS)).isTrue();
+        assertThat(p.exitValue()).as("lista mal formada").isEqualTo(2);
+    }
+
+    @Test
+    void classificacaoTemAsTabelasSensiveisExigidas() throws Exception {
+        String lista = Files.readString(Path.of("scripts/ci/tabelas-sensiveis.txt"));
+        for (String t : List.of("usuario", "usuario_clinica", "flag_clinica", "paciente", "paciente_clinica",
+                "encaminhamento", "historico_status_encaminhamento", "consentimento", "link_paciente",
+                "desafio_encaminhador", "sessao", "anexo_encaminhamento", "evento_auditoria",
+                "contrarreferencia", "agendamento", "vaga_encaminhamento", "envio_notificacao", "profissional_clinica")) {
+            assertThat(lista).containsPattern("(?m)^sensivel " + t + "\\s*$");
+        }
     }
 
     @Test

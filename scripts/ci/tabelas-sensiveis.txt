@@ -1,0 +1,46 @@
+# Classificacao das tabelas de saas.* para a guarda de migracao (ADR-0040, item 2a).
+# Protegido por CODEOWNERS (/scripts/ci/). No CI a guarda le este arquivo da branch base,
+# nunca do PR (ADR-0040, item 8): reclassificar uma tabela e um PR proprio, revisado pelo dono.
+#
+# Formato: "sensivel <tabela>" ou "nao_sensivel <tabela>", um por linha; '#' inicia comentario.
+# GRANT de privilegio de tabela/coluna para os papeis da aplicacao passa sem aprovacao SO em
+# tabela "nao_sensivel". Tabela sensivel ou ausente desta lista (tabela nova, por padrao)
+# exige aprovacao. REVOKE passa em qualquer tabela (so reduz acesso).
+# GuardaMigracaoTest exige que toda tabela criada em db/migration esteja classificada aqui.
+
+# Usuarios, papeis e vinculos (quem acessa o que)
+sensivel usuario
+sensivel usuario_clinica
+sensivel profissional_clinica
+# Flags (ADR-0019: a rede depende de flag conferida no banco)
+sensivel flag_clinica
+# Profissional: telefone e email com GRANT por coluna
+sensivel profissional
+# Dado de paciente e clinico
+sensivel paciente
+sensivel paciente_clinica
+sensivel encaminhamento
+sensivel vaga_encaminhamento
+sensivel agendamento
+sensivel contrarreferencia
+sensivel envio_notificacao
+# Historico de status (ADR-0027)
+sensivel historico_status_encaminhamento
+# Consentimento (ADR-0022)
+sensivel consentimento
+# Link, codigo e sessao (ADR-0023, ADR-0030)
+sensivel link_paciente
+sensivel sessao
+# Desafio do encaminhador (ADR-0025)
+sensivel desafio_encaminhador
+# Anexos
+sensivel anexo_encaminhamento
+# Auditoria
+sensivel evento_auditoria
+
+# Dados de referencia e de cadastro da clinica, sem dado pessoal de paciente
+nao_sensivel especialidade
+nao_sensivel clinica
+nao_sensivel clinica_especialidade
+nao_sensivel profissional_especialidade
+nao_sensivel horario_atendimento
