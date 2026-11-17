@@ -1,13 +1,17 @@
 -- =====================================================================
 -- Reversao de V2__gates_identidade.sql (executada por saas_migracao, fora do Flyway).
 -- Devolve o schema saas exatamente ao estado da V1: funcoes com o texto da V1
--- (copiado sem mudanca), politicas com a expressao da V1 e sem a coluna
--- encaminhamento.telefone_contato. Por fim apaga a linha da V2 no historico do Flyway.
+-- (copiado sem mudanca, inclusive nome_normalizado sem remocao de acentos), politicas com
+-- a expressao da V1, SELECT da tabela inteira em encaminhamento para saas_app e sem a
+-- coluna encaminhamento.telefone_contato. Por fim apaga a linha da V2 no historico do Flyway.
 -- ATENCAO: reverter reabre os achados T-20, I-22 e I-23 do Red Team.
 -- =====================================================================
 
 SET ROLE saas_funcoes;
 SET search_path = saas, public;
+
+CREATE OR REPLACE FUNCTION nome_normalizado(p text) RETURNS text LANGUAGE sql IMMUTABLE SET search_path = saas, pg_temp AS
+$$ SELECT lower(regexp_replace(btrim(p), '\s+', ' ', 'g')) $$;
 
 CREATE OR REPLACE FUNCTION mesma_pessoa(p paciente, p_nome text, p_telefone text, p_nascimento date, p_cpf_hash bytea)
 RETURNS boolean LANGUAGE sql IMMUTABLE SET search_path = saas, pg_temp AS
@@ -103,13 +107,23 @@ END $$;
 SET ROLE saas_owner;
 SET search_path = saas, public;
 
+ALTER POLICY paciente_clinica_ver ON paciente_clinica
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']));
 ALTER POLICY agendamento_equipe_cria ON agendamento
   WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']) AND encaminhamento_id IS NULL);
+ALTER POLICY agendamento_equipe_altera ON agendamento
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']))
+  WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']));
 ALTER POLICY consentimento_recepcao_registra ON consentimento
   WITH CHECK (eh_equipe(ARRAY['ADMIN','RECEPCAO']) AND clinica_id = app_clinica_id()
               AND canal = 'RECEPCAO' AND finalidade <> 'COMPARTILHAR_CASO' AND revogado_em IS NULL
               AND EXISTS (SELECT 1 FROM paciente_clinica pc
                            WHERE pc.paciente_id = consentimento.paciente_id AND pc.clinica_id = app_clinica_id()));
+
+REVOKE SELECT (id, profissional_origem_id, paciente_id, especialidade_destino_id, clinica_destino_id,
+               profissional_destino_id, motivo_cifrado, urgencia, status, expira_em, criado_em, atualizado_em)
+  ON encaminhamento FROM saas_app;
+GRANT SELECT ON encaminhamento TO saas_app;
 
 ALTER TABLE encaminhamento DROP COLUMN telefone_contato;
 

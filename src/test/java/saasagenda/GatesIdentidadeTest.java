@@ -97,12 +97,15 @@ class GatesIdentidadeTest {
         String umDia = criaEncaminhamento("Mae Ficticia", "+5581900000101", "1980-01-02", cpf);
         String mesmaComTelefoneNovo = criaEncaminhamento("  MAE   ficticia ", "+5581900000102", "1980-01-01", cpf);
         String mesmaSemNascimento = criaEncaminhamento("Mae Ficticia", "+5581900000103", null, cpf);
+        String comAcento = criaEncaminhamento("Mãe Fictícia", "+5581900000105", "1980-01-01", cpf);
 
         assertThat(pacienteDe(filho)).isNotEqualTo(pacienteDe(mae));
         assertThat(pacienteDe(umDia)).isNotEqualTo(pacienteDe(mae));
         assertThat(nomeDoPaciente(pacienteDe(filho))).isEqualTo("Filho Ficticio");
-        // Controles: CPF com nome normalizado e nascimento iguais (ou ausente num dos lados).
+        // Controles: CPF com nome normalizado (caixa, espacos e acentos nao contam) e nascimento
+        // iguais, ou nascimento ausente num dos lados (spec F3.1).
         assertThat(pacienteDe(mesmaComTelefoneNovo)).isEqualTo(pacienteDe(mae));
+        assertThat(pacienteDe(comAcento)).isEqualTo(pacienteDe(mae));
         assertThat(pacienteDe(mesmaSemNascimento)).isEqualTo(pacienteDe(mae));
         // Regra da Fase 1 mantida: sem CPF, nome normalizado + nascimento + telefone.
         String semCpf1 = criaEncaminhamento("Idosa Ficticia", "+5581900000104", "1940-02-02", null);
@@ -110,6 +113,38 @@ class GatesIdentidadeTest {
         String netoSemCpf = criaEncaminhamento("Neto Ficticio", "+5581900000104", "2016-02-02", null);
         assertThat(pacienteDe(semCpf2)).isEqualTo(pacienteDe(semCpf1));
         assertThat(pacienteDe(netoSemCpf)).isNotEqualTo(pacienteDe(semCpf1));
+    }
+
+    @Test
+    void cpfComNascimentoSoComparadoQuandoOsDoisTem() throws Exception {
+        byte[] cpf = {4, 4, 4, 1};
+        String semData = criaEncaminhamento("Pessoa Sem Data", "+5581900000110", null, cpf);
+        String comData = criaEncaminhamento("Pessoa Sem Data", "+5581900000110", "1975-07-07", cpf);
+        String outroNome = criaEncaminhamento("Outra Pessoa", "+5581900000110", null, cpf);
+        assertThat(pacienteDe(comData)).isEqualTo(pacienteDe(semData));
+        assertThat(pacienteDe(outroNome)).isNotEqualTo(pacienteDe(semData));
+        // Quando os dois tem nascimento, data diferente nunca funde.
+        byte[] cpf2 = {4, 4, 4, 2};
+        String comData2 = criaEncaminhamento("Pessoa Com Data", "+5581900000111", "1975-07-07", cpf2);
+        String outraData = criaEncaminhamento("Pessoa Com Data", "+5581900000111", "1976-07-07", cpf2);
+        assertThat(pacienteDe(outraData)).isNotEqualTo(pacienteDe(comData2));
+    }
+
+    @Test
+    void nomeNormalizadoIgnoraAcentosCaixaEEspacos() throws Exception {
+        try (Connection c = superusuario()) {
+            assertThat(texto(c, "SELECT saas.nome_normalizado(?)", "  José   da   CONCEIÇÃO ")).isEqualTo("jose da conceicao");
+            assertThat(texto(c, "SELECT saas.nome_normalizado(?)", "Jose da Conceicao")).isEqualTo("jose da conceicao");
+            // Forma decomposta (letra + marca combinante) normaliza igual a pre-composta.
+            assertThat(texto(c, "SELECT saas.nome_normalizado(?)", "Jose\u0301 Ma\u0303e".translateEscapes()))
+                    .isEqualTo("jose mae");
+            assertThat(texto(c, "SELECT saas.nome_normalizado(?)", "ÂNGELA ÜRSULA ÑANDÚ ÇÁÉÍÓÚ"))
+                    .isEqualTo("angela ursula nandu caeiou");
+        }
+        // Criterio (b) sem CPF tambem casa com e sem acento.
+        String a = criaEncaminhamento("João Fictício", "+5581900000120", "1950-08-08", null);
+        String b = criaEncaminhamento("joao ficticio", "+5581900000120", "1950-08-08", null);
+        assertThat(pacienteDe(b)).isEqualTo(pacienteDe(a));
     }
 
     @Test
@@ -151,7 +186,21 @@ class GatesIdentidadeTest {
     }
 
     @Test
-    void casoSemTelefoneDeContatoUsaOCadastro() throws Exception {
+    void telefoneDeContatoEObrigatorioNaCriacao() throws Exception {
+        byte[] cpf = {8, 8, 8};
+        String existente = criaEncaminhamento("Pessoa Obrigatorio", "+5581900000350", "1992-09-09", cpf);
+        assertThat(existente).isNotNull();
+        // Mesmo quando o CPF casa com um cadastro que tem telefone, sem telefone do caso nao cria.
+        assertThatThrownBy(() -> criaEncaminhamento("Pessoa Obrigatorio", null, "1992-09-09", cpf))
+                .isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> criaEncaminhamento("Pessoa Obrigatorio", "   ", "1992-09-09", cpf))
+                .isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> criaEncaminhamento("Pessoa Nova", null, "1993-09-09", null))
+                .isInstanceOf(SQLException.class);
+    }
+
+    @Test
+    void casoSemTelefoneDeContatoNaoSaiEFicaRegistrado() throws Exception {
         String pac;
         String enc = UUID.randomUUID().toString();
         try (Connection c = superusuario(); Statement s = c.createStatement()) {
@@ -160,9 +209,23 @@ class GatesIdentidadeTest {
                     + "motivo_cifrado, urgencia, expira_em) VALUES ('" + enc + "', '" + ENCAMINHADOR + "', '" + pac
                     + "', '" + ESPECIALIDADE + "', '\\x00', 'ROTINA', now() + interval '1 day')");
         }
+        String envio;
         try (Connection jobs = conecta("saas_jobs")) {
-            String envio = texto(jobs, "SELECT saas.jobs_envio_link_paciente(?::uuid)", enc);
-            assertThat(prepara(jobs, envio)[0]).isEqualTo("+5581900000401");
+            envio = texto(jobs, "SELECT saas.jobs_envio_link_paciente(?::uuid)", enc);
+            // Nunca cai no telefone do cadastro: nada volta (nem contato, nem segredo).
+            try (PreparedStatement p = jobs.prepareStatement("SELECT contato, segredo FROM saas.jobs_envio_prepara(?::uuid)")) {
+                p.setString(1, envio);
+                try (ResultSet r = p.executeQuery()) {
+                    assertThat(r.next()).isFalse();
+                }
+            }
+        }
+        try (Connection c = superusuario()) {
+            assertThat(texto(c, "SELECT status FROM saas.envio_notificacao WHERE id = ?::uuid", envio)).isEqualTo("FALHOU");
+            assertThat(texto(c, "SELECT count(*)::text FROM saas.link_paciente WHERE encaminhamento_id = ?::uuid", enc))
+                    .isEqualTo("0");
+            assertThat(texto(c, "SELECT count(*)::text FROM saas.evento_auditoria WHERE acao = 'ENVIO_SEM_CONTATO' "
+                    + "AND recurso_tipo = 'envio_notificacao' AND recurso_id = ?::uuid", envio)).isEqualTo("1");
         }
     }
 
@@ -176,6 +239,24 @@ class GatesIdentidadeTest {
                 p.setString(1, enc);
                 assertThatThrownBy(p::executeUpdate).isInstanceOf(SQLException.class);
             }
+        }
+    }
+
+    @Test
+    void papelWebNaoLeOTelefoneDeContato() throws Exception {
+        String enc = criaEncaminhamento("Pessoa Sigilo", "+5581900000550", "1991-05-06", null);
+        try (Connection c = conecta("saas_app")) {
+            define(c, "app.sessao", TOKEN_ENCAMINHADOR);
+            assertThatThrownBy(() -> texto(c, "SELECT telefone_contato FROM saas.encaminhamento WHERE id = ?::uuid", enc))
+                    .isInstanceOf(SQLException.class);
+            assertThatThrownBy(() -> texto(c, "SELECT row_to_json(e)::text FROM saas.encaminhamento e WHERE id = ?::uuid", enc))
+                    .isInstanceOf(SQLException.class);
+            // Controle: as demais colunas continuam legiveis pelo encaminhador dono do caso.
+            assertThat(texto(c, "SELECT status FROM saas.encaminhamento WHERE id = ?::uuid", enc)).isEqualTo("CRIADO");
+        }
+        try (Connection c = superusuario()) {
+            assertThat(texto(c, "SELECT has_column_privilege('saas_app', 'saas.encaminhamento', 'telefone_contato', 'SELECT')::text"))
+                    .isEqualTo("false");
         }
     }
 
@@ -197,6 +278,8 @@ class GatesIdentidadeTest {
             // Controle: com o consentimento ativo, a recepcao registra consentimento e marca consulta.
             assertThat(insereConsentimento(c, pac)).isEqualTo(1);
             assertThat(insereAgendamento(c, pac, 5, "antes-revogacao")).isEqualTo(1);
+            assertThat(vinculosVisiveis(c, pac)).isEqualTo(1);
+            assertThat(reagenda(c, "antes-revogacao", 8)).isEqualTo(1);
         }
         try (Connection web = conecta("saas_app")) {
             define(web, "app.sessao", sessaoPaciente);
@@ -210,10 +293,19 @@ class GatesIdentidadeTest {
             assertThat(cadastraNaClinica(c, "Pessoa Revoga", "+5581900000601", "1985-06-06", null)).isNotEqualTo(pac);
             assertThatThrownBy(() -> insereAgendamento(c, pac, 6, "depois-revogacao")).isInstanceOf(SQLException.class);
             assertThatThrownBy(() -> insereConsentimento(c, pac)).isInstanceOf(SQLException.class);
+            // Revisor F3, item 4: leitura do vinculo e alteracao do agendamento tambem fecham.
+            assertThat(vinculosVisiveis(c, pac)).isZero();
+            assertThatThrownBy(() -> reagenda(c, "antes-revogacao", 9)).isInstanceOf(SQLException.class);
+            assertThatThrownBy(() -> reagenda(c, "chave-t4", 10)).isInstanceOf(SQLException.class);
+            assertThatThrownBy(() -> mudaStatus(c, "chave-t4", "CONFIRMADO")).isInstanceOf(SQLException.class);
+            // Cancelar continua possivel (libera o horario, nao usa o vinculo para nada novo).
+            assertThat(mudaStatus(c, "antes-revogacao", "CANCELADO")).isEqualTo(1);
             // Controle: paciente com vinculo de cadastro continua atendido.
             String proprio = cadastraNaClinica(c, "Pessoa Cadastro", "+5581900000602", "1986-06-06", null);
             assertThat(insereConsentimento(c, proprio)).isEqualTo(1);
             assertThat(insereAgendamento(c, proprio, 7, "cadastro")).isEqualTo(1);
+            assertThat(vinculosVisiveis(c, proprio)).isEqualTo(1);
+            assertThat(reagenda(c, "cadastro", 11)).isEqualTo(1);
         }
     }
 
@@ -264,6 +356,39 @@ class GatesIdentidadeTest {
             p.setInt(5, dias);
             p.setString(6, chave);
             return p.executeUpdate();
+        }
+    }
+
+    private static int vinculosVisiveis(Connection c, String paciente) throws SQLException {
+        return Integer.parseInt(texto(c, "SELECT count(*)::text FROM saas.paciente_clinica WHERE paciente_id = ?::uuid", paciente));
+    }
+
+    private static int reagenda(Connection c, String chave, int dias) throws SQLException {
+        try (PreparedStatement p = c.prepareStatement("UPDATE saas.agendamento SET inicio = now() + make_interval(days => ?), "
+                + "fim = now() + make_interval(days => ?, mins => 30) WHERE chave_idempotencia = ? AND clinica_id = ?::uuid")) {
+            p.setInt(1, dias);
+            p.setInt(2, dias);
+            p.setString(3, chave);
+            p.setString(4, CLINICA);
+            int n = p.executeUpdate();
+            if (n == 0) {
+                throw new SQLException("nenhuma linha alterada");
+            }
+            return n;
+        }
+    }
+
+    private static int mudaStatus(Connection c, String chave, String status) throws SQLException {
+        try (PreparedStatement p = c.prepareStatement(
+                "UPDATE saas.agendamento SET status = ? WHERE chave_idempotencia = ? AND clinica_id = ?::uuid")) {
+            p.setString(1, status);
+            p.setString(2, chave);
+            p.setString(3, CLINICA);
+            int n = p.executeUpdate();
+            if (n == 0) {
+                throw new SQLException("nenhuma linha alterada");
+            }
+            return n;
         }
     }
 
