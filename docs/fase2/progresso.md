@@ -2,7 +2,7 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 14 de 14.
+Limites: 22 iterações no total (14 originais; o Negócio mandou retomar em 2026-11-17 depois da saída 1 e o Orquestrador estendeu para 22: F10 até 3 tentativas, F11 e F12 até 2 cada depois de B1/B2, 1 para o Red Team final), 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 15 de 22.
 
 ## Features
 
@@ -17,7 +17,7 @@ Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 vo
 | F7 | Contexto por transação, pool seguro, I-20, credencial de jobs separada (E-09) | PRONTA (saída 0, tentativa 2) | 2 | 9 de 9 | Verificador 9/9; Revisor APROVADO com ressalvas |
 | F8 | Storage S3 com SSE-KMS e URL assinada curta, auditoria de acesso | PRONTA (saída 0) | 1 | 9 de 9 | Verificador 9/9; Revisor APROVADO com ressalvas |
 | F9 | Base LGPD: consentimento pela API, termos e política em rascunho | PRONTA (saída 0) | 1 | 7 de 7 | Verificador 7/7 (após bug do teste F9.2 corrigido pelo Arquiteto f2ddfbd); Revisor APROVADO com ressalvas |
-| F10 | Terraform AWS sa-east-1, 3 ambientes, orçamento coerente com R$ 800 | PENDENTE | 0 | 0 de 10 | baseline |
+| F10 | Terraform AWS sa-east-1, 3 ambientes, orçamento coerente com R$ 800 | PRONTA (saída 0) | 1 | 10 de 10 | Verificador 10/10 VERDE (mais sondas de cotação 4,37 e 7,90 fora do teste); Revisor APROVADO com ressalvas |
 | F11 | MFA obrigatório para ADMIN e MEDICO | BLOQUEADA (B2) | 0 | 0 de 3 | baseline |
 | F12 | Menor com cadastro próprio ligado a responsável (ADR-0037) | BLOQUEADA (B1) | 0 | 0 de 4 | baseline |
 
@@ -151,7 +151,13 @@ e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca
 - P11 (F8, Revisor): toda DataAccessException vira 403 (esconde falha de infra); IP real atrás de balanceador (X-Forwarded-For confiável) a configurar com a hospedagem.
 | 14 | 2026-11-17 | F9 | 6a48bb9 | APROVADO (ressalvas: sem índice único de consentimento ativo; canal SITE vs WEB na auditoria; limite de corpo fixo) | 7 VERDE; run.sh all 65 VERDE, 17 VERMELHO (F10 não iniciada; F11/F12 bloqueadas) | F2.9 verde | Sucesso F9; limite de 14 iterações atingido (saída 1) |
 - P12 (F9, Revisor): sem índice único de consentimento ativo (concessões simultâneas podem duplicar); canal SITE no consentimento vs WEB na auditoria; limite de corpo 4096 fixo.
+| 15 | 2026-11-17 | F10 | 291b35f | APROVADO com ressalvas (s3:DeleteObject na política web; cotação com padrão em conta/; saída da senha mestra não exposta na raiz; name fixo no parameter group; custo subestimado no README) | 10 VERDE; sondas extras do Verificador com cotações 4,37 e 7,90 (R$ 799,97 e R$ 799,95) | F2.9 verde | Sucesso F10 (retomada após saída 1; limite 14 -> 22) |
+- P13 (F10, Revisor): política IAM web concede `s3:DeleteObject` nos anexos sem caso de uso (F8 só sobe e baixa; retenção é P7). Remover até existir caso de uso (iam.tf:20).
+- P14 (F10, Revisor): `cotacao_usd_brl` com padrão 5.0 em `conta/` (apply sem `-var` grava US$ 160 com cotação inventada; tornar obrigatória); saída `rds_senha_mestra_secret_arn` do módulo não exposta na raiz, mas o README manda usá-la; `name` fixo no parameter group com `create_before_destroy` (usar `name_prefix`); descrição do alarme de DDL diz "fora do pipeline" mas toda migração dispara (R-07, correto; texto a ajustar).
+- P15 (F10, Revisor): `SAAS_S3_KMS_KEY_ID` tem que ser o ARN da chave (alias ou id puro faz a política do bucket negar todo upload); nome de bucket genérico pode colidir globalmente (definir `prefixo` com sufixo da conta antes do primeiro apply); log group `upgrade` do RDS nasce fora do Terraform sem retenção.
+- P16 (F10, Revisor): versionamento sem expiração de versões não correntes (retenção, P7); estimativa de custo do README subestima: 3 RDS t4g + 9 chaves KMS + 15 segredos ficam em US$ 110 a 120/mês (R$ 550 a 750), sobrando pouco para computação (P3) e WhatsApp dentro dos R$ 800.
+- P17 (F10, Negócio): decisões do Executor que precisam de aval do Luiz: (a) MFA do Cognito `OPTIONAL` por padrão até B2 (F6 não confere MFA; prod aplicada assim deixa ADMIN e MEDICO sem segundo fator, contra o ADR-0007; sugestão: prod sem padrão, obrigando a passar o valor); (b) orçamento no teto cheio de R$ 800 só para a AWS, sendo que o ADR-0013 soma WhatsApp (fora da AWS); avisos de 50 e 80% atenuam; Luiz decide se baixa a fração; (c) se P5 virar uma conta por ambiente, `conta/` aplicada em cada uma dá 3 x R$ 800.
 
 ## Parada do loop
 
-Saída 1 (Limite): 14 de 14 iterações usadas em 2026-11-17. F1 a F9 prontas e verificadas (`run.sh all`: 65 VERDE; log em docs/fase2/aceite-final-iteracao14.log). F10 não iniciada. F11 (B2) e F12 (B1) bloqueadas aguardando o Negócio. Red Team final da Fase 2 ainda não rodou.
+Saída 1 (Limite) em 2026-11-17 com 14 de 14: F1 a F9 prontas (`run.sh all`: 65 VERDE; docs/fase2/aceite-final-iteracao14.log). Retomada no mesmo dia por ordem do Negócio, limite estendido para 22. Iteração 15: F10 PRONTA. Pendente: Red Team final da Fase 2 (iteração 16); F11 (B2) e F12 (B1) seguem no Gate (saída 4) aguardando o Negócio.

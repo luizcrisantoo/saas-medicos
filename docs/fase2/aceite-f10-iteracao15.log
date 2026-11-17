@@ -1,0 +1,13 @@
+== F10: Terraform AWS sa-east-1: 3 ambientes, RDS com PITR, S3+KMS, Secrets Manager, Cognito com MFA, alarmes e orcamento ==
+VERDE     F10.1    terraform fmt -check e validate passam em infra/terraform/ambientes/{dev,homolog,prod} (e conta, se existir)
+VERDE     F10.2    terraform plan roda sem credenciais AWS reais (override de aceite) em todas as raizes, com duas cotacoes
+VERDE     F10.3    os tres ambientes usam a regiao sa-east-1
+VERDE     F10.4    RDS PostgreSQL 16 por ambiente: cifrado, privado, PITR, TLS obrigatorio (rds.force_ssl), logs exportados, protecao contra exclusao em prod, senha fora do codigo
+VERDE     F10.5    S3 de anexos por ambiente: SSE-KMS com chave propria rotacionada, bloqueio publico total e politica que exige TLS e SSE-KMS
+VERDE     F10.6    Secrets Manager: segredos separados de saas_app, saas_jobs, saas_auth e saas_migracao por ambiente, cifrados com KMS, sem valor no codigo
+VERDE     F10.7    Cognito por ambiente: MFA TOTP habilitado, senha com 12+ caracteres, access token de ate 60 min, revogacao de token
+VERDE     F10.8    alarmes do CloudWatch para as linhas ALERTA_DDL_SAAS e ALERTA_PREPARO_VOLUME do log do banco
+VERDE     F10.9    ambientes isolados: buckets e instancias RDS com nomes distintos
+VERDE     F10.10   orcamento mensal da conta coerente com o teto de R$ 800 (limite em USD = teto / cotacao), alertas real e previsto
+
+RESUMO: 10 VERDE, 0 VERMELHO

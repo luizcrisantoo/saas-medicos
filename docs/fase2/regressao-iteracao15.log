@@ -1,0 +1,5 @@
+== Regressao das baterias -r2 (parte de F2) ==
+VERDE     F2.9     regressao: baterias -r2 sem falha fora das sondas neutras de gate
+
+RESUMO: 1 VERDE, 0 VERMELHO
+exit=0
