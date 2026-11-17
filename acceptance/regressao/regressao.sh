@@ -1,8 +1,9 @@
 # shellcheck shell=bash
 # Regressao da Fase 1 contra o banco migrado pelo Flyway (bootstrap + db/migration do Executor).
 # Baterias: as versoes -r2 atuais (docs/fase1-resumo.md, secao 5 e 6). Nenhuma e alterada:
-# as unicas adaptacoes sao de infraestrutura (socket/porta/nome do banco, como na Fase 1) e a
-# lista de sondas NEUTRAS abaixo, cujo resultado depende de um gate da Fase 2 (o gate e conferido
+# as unicas adaptacoes sao de infraestrutura (socket/porta/nome do banco, como na Fase 1), a
+# semente I-22 (_reg_semente: so acrescenta telefone_contato aos casos da semente de rls, indep1 e
+# indep2; nenhuma sonda muda, conferido por regressao.py) e a lista de sondas NEUTRAS abaixo, cujo resultado depende de um gate da Fase 2 (o gate e conferido
 # pelas sondas novas de F3/F4, com esperado invertido). Fonte das sondas neutras: docs/fase2/spec.md, secao 6.
 #
 # Uso (fonte): roda_regressao TEMPLATE  -> define REG_RES[bateria]=ok|motivo e REG_LOG
@@ -41,32 +42,39 @@ _reg_copia_sem_stop() { # arquivo destino : mesma bateria com \set ON_ERROR_STOP
   # comportamento por gate nao derruba as demais; sonda que deixa de rodar aparece como AUSENTE)
   sed -e 's/^\\set ON_ERROR_STOP on/\\set ON_ERROR_STOP off/' "$1" >"$2"
 }
+_reg_semente() { # bateria arquivo(adaptado no lugar) : semente I-22 (telefone_contato do caso), docs/fase2/spec.md secao 6.
+  # So acrescimo, nunca em sonda: regressao.py recusa outra coisa; o diff fica em $REG_LOG/<bateria>.semente.diff.
+  python3 "$REGPY" semente "$1" "$2" "$2.sem" "$REG_LOG/$1.semente.diff" && mv "$2.sem" "$2"
+}
 
 roda_regressao() { # template
-  local tpl=$1 out falhas rc
+  local tpl=$1 out falhas rc sf
   REG_LOG="$TMPA/regressao"; mkdir -p "$REG_LOG"
   comm -23 <($PSU -d "$tpl" -Atc "select relname from pg_class where relnamespace='saas'::regnamespace and relkind in ('r','p')" | sort -u) \
            <(cut -d'|' -f1 "$GOLD/colunas-modelo-v2.txt" | sort -u) >"$REG_LOG/tabelas-novas.txt"
   # 1. teste-rls-r2.sql (Executor, inclui a matriz de 392 sondas)
   _reg_db rls "$tpl"; out="$REG_LOG/rls.out"
-  _reg_copia_sem_stop "$EV/teste-rls-r2.sql" "$REG_LOG/rls.sql"; $PSU -d rls -f "$REG_LOG/rls.sql" >"$out" 2>&1; rc=$?
+  _reg_copia_sem_stop "$EV/teste-rls-r2.sql" "$REG_LOG/rls.sql"; sf=$(_reg_semente rls "$REG_LOG/rls.sql") || sf="semente recusada: ${sf:-erro}"; $PSU -d rls -f "$REG_LOG/rls.sql" >"$out" 2>&1; rc=$?
   falhas=$(_reg_falhas_tabela rls "select secao||': '||nome||' ['||coalesce(ctx,'')||']', coalesce(ok,true) from teste_aux.res order by n" rls)
-  if [ $rc -ne 0 ]; then REG_RES[rls]="psql exit=$rc (ver $out)"
+  if [ -n "$sf" ]; then REG_RES[rls]="$sf"
+  elif [ $rc -ne 0 ]; then REG_RES[rls]="psql exit=$rc (ver $out)"
   elif [ -n "$falhas" ]; then REG_RES[rls]="falhas: $(echo "$falhas" | head -3 | tr '\n' ';')"
   elif ! grep -q "tabelas alteradas apos todas as sondas: 0" "$out"; then REG_RES[rls]="integridade: sondas persistiram mudanca"
   else REG_RES[rls]=ok; fi
   # 2. teste-r1-independente-r2.sql (Testador r1, copia r2)
   _reg_db indep1 "$tpl"; out="$REG_LOG/indep1.out"
-  _reg_copia_sem_stop "$EV/teste-r1-independente-r2.sql" "$REG_LOG/indep1.sql"; $PSU -d indep1 -f "$REG_LOG/indep1.sql" >"$out" 2>&1; rc=$?
+  _reg_copia_sem_stop "$EV/teste-r1-independente-r2.sql" "$REG_LOG/indep1.sql"; sf=$(_reg_semente indep1 "$REG_LOG/indep1.sql") || sf="semente recusada: ${sf:-erro}"; $PSU -d indep1 -f "$REG_LOG/indep1.sql" >"$out" 2>&1; rc=$?
   falhas=$(_reg_falhas_tabela indep1 "select secao||': '||nome||' ['||coalesce(ctx,'')||']', coalesce(ok,true) from t.res order by n" indep1)
-  if [ $rc -ne 0 ]; then REG_RES[indep1]="psql exit=$rc (ver $out)"
+  if [ -n "$sf" ]; then REG_RES[indep1]="$sf"
+  elif [ $rc -ne 0 ]; then REG_RES[indep1]="psql exit=$rc (ver $out)"
   elif [ -n "$falhas" ]; then REG_RES[indep1]="falhas: $(echo "$falhas" | head -3 | tr '\n' ';')"
   else REG_RES[indep1]=ok; fi
   # 3. teste-r2-independente.sql (Testador r2)
   _reg_db indep2 "$tpl"; out="$REG_LOG/indep2.out"
-  _reg_copia_sem_stop "$EV/teste-r2-independente.sql" "$REG_LOG/indep2.sql"; $PSU -d indep2 -f "$REG_LOG/indep2.sql" >"$out" 2>&1; rc=$?
+  _reg_copia_sem_stop "$EV/teste-r2-independente.sql" "$REG_LOG/indep2.sql"; sf=$(_reg_semente indep2 "$REG_LOG/indep2.sql") || sf="semente recusada: ${sf:-erro}"; $PSU -d indep2 -f "$REG_LOG/indep2.sql" >"$out" 2>&1; rc=$?
   falhas=$(_reg_falhas_tabela indep2 "select secao||': '||nome||' ['||coalesce(ctx,'')||']', coalesce(ok,true) from t.res order by n" indep2)
-  if [ $rc -ne 0 ]; then REG_RES[indep2]="psql exit=$rc (ver $out)"
+  if [ -n "$sf" ]; then REG_RES[indep2]="$sf"
+  elif [ $rc -ne 0 ]; then REG_RES[indep2]="psql exit=$rc (ver $out)"
   elif [ -n "$falhas" ]; then REG_RES[indep2]="falhas: $(echo "$falhas" | head -3 | tr '\n' ';')"
   else REG_RES[indep2]=ok; fi
   # 4. sondas-r2.sql (Executor r2: R2-1 a R2-7)

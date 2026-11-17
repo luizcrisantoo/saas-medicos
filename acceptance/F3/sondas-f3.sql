@@ -139,6 +139,28 @@ SELECT aceite.reg('F3.2','cadastro de Helena intacto depois da coincidencia de C
 -- =====================================================================
 -- I-22: telefone informado agora nunca e descartado em silencio
 -- =====================================================================
+-- lado negativo: caso SEM telefone de contato (linha gravada fora de encaminhamento_cria, como a
+-- semente das baterias da Fase 1) de paciente com telefone na ficha. O envio nao pode cair no
+-- telefone do cadastro: nem contato nem segredo saem, nenhum link nasce.
+INSERT INTO paciente(id,nome,telefone) VALUES ('c3000000-0000-0000-0003-0000000000f1','Silvio Sem Contato','+5581955550001');
+INSERT INTO encaminhamento(id,profissional_origem_id,paciente_id,especialidade_destino_id,motivo_cifrado,urgencia,expira_em)
+  VALUES ('e3000000-0000-0000-0005-0000000000f1','e3000000-0000-0000-0002-000000000001','c3000000-0000-0000-0003-0000000000f1',
+          :'esp','\xf3f1','ROTINA',now()+interval '10 days');
+\c - saas_jobs
+SELECT aceite.val($$select jobs_envio_link_paciente('e3000000-0000-0000-0005-0000000000f1')::text$$) AS env_n \gset
+SELECT aceite.val(format('select contato from jobs_envio_prepara(%L::uuid)', :'env_n')) AS contato_n \gset
+\c - pgtest
+SET search_path = saas, public;
+SELECT aceite.reg('F3.3','pre: caso sem telefone de contato tem envio de link pendente pelo caminho real (jobs)','IGUAL:1',
+  (SELECT count(*)::text FROM envio_notificacao WHERE id::text = :'env_n' AND encaminhamento_id = 'e3000000-0000-0000-0005-0000000000f1'));
+SELECT aceite.reg('F3.3','caso sem telefone de contato: o envio nunca sai para o telefone do cadastro','DIFERENTE:+5581955550001', :'contato_n');
+SELECT aceite.reg('F3.3','caso sem telefone de contato: nenhum contato entregue (o envio nao sai)','IGUAL:true',
+  (:'contato_n' = 'NULL' OR :'contato_n' LIKE 'ERRO%')::text);
+SELECT aceite.reg('F3.3','caso sem telefone de contato: nenhum link (segredo) gerado','IGUAL:0',
+  (SELECT count(*)::text FROM link_paciente WHERE encaminhamento_id = 'e3000000-0000-0000-0005-0000000000f1'));
+SELECT aceite.reg('F3.3','caso sem telefone de contato: envio nao fica entregue nem pronto para reenvio ao cadastro','IGUAL:0',
+  (SELECT count(*)::text FROM envio_notificacao WHERE encaminhamento_id = 'e3000000-0000-0000-0005-0000000000f1'
+     AND (status NOT IN ('PENDENTE','FALHOU') OR link_paciente_id IS NOT NULL)));
 \c - saas_jobs
 SELECT aceite.val(format('select jobs_envio_link_paciente(%L)::text', :'e_d')) AS env_d \gset
 SELECT aceite.val(format('select contato from jobs_envio_prepara(%L::uuid)', :'env_d')) AS contato_d \gset
