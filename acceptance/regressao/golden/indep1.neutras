@@ -1,0 +1,6 @@
+# I-21 (gate do Red Team r1): rede_ligada sem sessao deixa de responder; uma das correcoes aceitas e tirar o
+# EXECUTE da web. A matriz P-funcao exigia o EXECUTE. Conferido em F4.2.
+P-funcao: EXECUTE rede_ligada [saas_app]
+# A sonda exige que as tabelas com RLS e sem politica sejam exatamente as 4 do modelo-v2. Tabela nova so por
+# funcao (sem politica) e legitima se nenhum papel de login tiver privilegio nela: regra geral em F2.6.
+P-papeis: tabela com RLS sem nenhuma politica so as 4 "so funcoes" [superuser]

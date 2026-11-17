@@ -1,0 +1,15 @@
+# ferramentas e saidas temporarias dos testes de aceite
+acceptance/.bin/
+acceptance/.tmp/
+acceptance/harness/migra/build/
+acceptance/harness/migra/.gradle/
+# build
+build/
+.gradle/
+*.class
+# terraform local
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+__pycache__/

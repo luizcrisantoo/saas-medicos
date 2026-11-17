@@ -1,0 +1,27 @@
+# Gate 'envios pendentes apos cancelamento' (Testador r2, falha latente reproduzivel): falha contra o modelo-v2;
+# exigido com esperado invertido em F4 (sondas-f4.sql, criterio F4.4).
+N3-cancelamento: envio CONFIRMACAO_AGENDAMENTO PENDENTE de agendamento cancelado (T11) nao pode sair ao paciente [superuser]
+N3-cancelamento: envio LEMBRETE PENDENTE de agendamento cancelado (T11) nao pode sair ao paciente [superuser]
+# T-20 (ADR-0036 2a corrigido, gate do Red Team r2): estes dois controles exigem o comportamento antigo.
+# CPF igual com nome e nascimento diferentes passa a ser outra pessoa (F3.1); recepcao nunca recebe o id (F3.2).
+N1-identidade: controle: CPF igual (HMAC) com nome, telefone e nascimento diferentes: mesma pessoa [superuser]
+N1-identidade: controle: recepcao da propria clinica, dados exatos: mesma pessoa [superuser]
+# O bloco N1 e um DO unico: se a recepcao recusar a coincidencia com erro (forma da sugestao nao decidida),
+# o bloco inteiro some. Ausencia tolerada; se rodar, tem que dar ok. Os ataques do bloco estao repetidos em F3.1/F3.2.
+?N1-identidade: controle: nome+telefone+nascimento iguais, sem CPF, mesmo encaminhador: mesma pessoa [superuser]
+?N1-identidade: controle: nome com caixa e espacos diferentes: mesma pessoa [superuser]
+?N1-identidade: ATAQUE: nome+telefone+nascimento iguais mas CPF DIFERENTE nao funde [superuser]
+?N1-identidade: ATAQUE: so o telefone igual nao funde [superuser]
+?N1-identidade: ATAQUE: sem nascimento e sem CPF nunca deduplica [superuser]
+?N1-identidade: ATAQUE: nascimento diferente nao funde [superuser]
+?N1-identidade: ATAQUE: telefone diferente (mesmo nome e nascimento) nao funde [superuser]
+?N1-identidade: ATAQUE: outro encaminhador (sem vinculo com a paciente) com dados exatos nao funde [superuser]
+?N1-identidade: ATAQUE: outro encaminhador com o CPF dela (sem vinculo) nao funde [superuser]
+?N1-identidade: ATAQUE: recepcao da clinica B com dados exatos de paciente da clinica A nao recebe o registro de A [superuser]
+?N1-identidade: ATAQUE: recepcao A, dados exatos com CPF diferente: nao funde [superuser]
+?N1-identidade: deduplicar nao altera o registro existente (nome, telefone, nascimento, CPF) [superuser]
+# A sonda do Testador referencia o registro r depois de capturar o erro de jobs_envio_prepara; quando a
+# correcao marca o envio como FALHOU antes (o que a propria sonda aceita), prepara recusa o envio, r fica sem
+# valor e a sonda vira "ERRO INESPERADO". O gate e conferido diretamente em F4.4.
+N3-cancelamento: ERRO INESPERADO CONFIRMACAO_AGENDAMENTO [superuser]
+N3-cancelamento: ERRO INESPERADO LEMBRETE [superuser]
