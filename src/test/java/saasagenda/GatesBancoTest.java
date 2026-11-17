@@ -146,6 +146,63 @@ class GatesBancoTest {
         assertThat(esperaNoLog("fora_pol_" + sufixo)).isFalse();
     }
 
+    /**
+     * R-08 (tentativa 2): comandos que o PostgreSQL 16 informa sem schema nem identidade (GRANT,
+     * REVOKE, ALTER DEFAULT PRIVILEGES), SET SCHEMA (informa o schema novo) e operacoes no proprio
+     * schema saas (RENAME, OWNER) tambem alertam, pelo dono e pelo superusuario, mesmo com ROLLBACK.
+     */
+    @Test
+    void ddlSemIdentidadeSetSchemaEOperacoesNoSchemaGeramAlerta() throws Exception {
+        String sufixo = UUID.randomUUID().toString().substring(0, 8);
+        String outro = "r08_outro_" + sufixo;
+        try (Connection c = superusuario(); Statement s = c.createStatement()) {
+            s.execute("CREATE SCHEMA " + outro + " AUTHORIZATION saas_owner");
+        }
+        int grant = contaNoLog("ALERTA_DDL_SAAS: GRANT (sem identidade");
+        int revoke = contaNoLog("ALERTA_DDL_SAAS: REVOKE (sem identidade");
+        int padrao = contaNoLog("ALERTA_DDL_SAAS: ALTER DEFAULT PRIVILEGES (sem identidade");
+        int saida = contaNoLog("ALERTA_DDL_SAAS: ALTER TABLE " + outro + ".especialidade por session_user=saas_migracao");
+        int saidaFuncao = contaNoLog("ALERTA_DDL_SAAS: ALTER FUNCTION " + outro + ".bloqueia_alteracao() por session_user=" + PG.getUsername());
+        int renomeia = contaNoLog("ALERTA_DDL_SAAS: ALTER SCHEMA saas_r08_" + sufixo + " ");
+        int dono = contaNoLog("ALERTA_DDL_SAAS: ALTER SCHEMA saas por session_user=" + PG.getUsername());
+        try (Connection c = conecta("saas_migracao"); Statement s = c.createStatement()) {
+            c.setAutoCommit(false);
+            s.execute("SET ROLE saas_owner");
+            s.execute("GRANT SELECT ON saas.especialidade TO saas_jobs");
+            s.execute("REVOKE SELECT ON saas.especialidade FROM saas_jobs");
+            s.execute("ALTER DEFAULT PRIVILEGES IN SCHEMA saas GRANT SELECT ON TABLES TO saas_jobs");
+            s.execute("ALTER TABLE saas.especialidade SET SCHEMA " + outro);
+            c.rollback();
+        }
+        try (Connection c = superusuario(); Statement s = c.createStatement()) {
+            c.setAutoCommit(false);
+            s.execute("ALTER FUNCTION saas.bloqueia_alteracao() SET SCHEMA " + outro);
+            s.execute("ALTER SCHEMA saas OWNER TO " + PG.getUsername());
+            s.execute("ALTER SCHEMA saas RENAME TO saas_r08_" + sufixo);
+            c.rollback();
+        }
+        Thread.sleep(1000);
+        assertThat(contaNoLog("ALERTA_DDL_SAAS: GRANT (sem identidade")).as("GRANT").isGreaterThan(grant);
+        assertThat(contaNoLog("ALERTA_DDL_SAAS: REVOKE (sem identidade")).as("REVOKE").isGreaterThan(revoke);
+        assertThat(contaNoLog("ALERTA_DDL_SAAS: ALTER DEFAULT PRIVILEGES (sem identidade")).as("ADP").isGreaterThan(padrao);
+        assertThat(contaNoLog("ALERTA_DDL_SAAS: ALTER TABLE " + outro + ".especialidade por session_user=saas_migracao"))
+                .as("SET SCHEMA pelo dono").isGreaterThan(saida);
+        assertThat(contaNoLog("ALERTA_DDL_SAAS: ALTER FUNCTION " + outro + ".bloqueia_alteracao() por session_user=" + PG.getUsername()))
+                .as("SET SCHEMA pelo superusuario").isGreaterThan(saidaFuncao);
+        assertThat(contaNoLog("ALERTA_DDL_SAAS: ALTER SCHEMA saas_r08_" + sufixo + " ")).as("RENAME").isGreaterThan(renomeia);
+        assertThat(contaNoLog("ALERTA_DDL_SAAS: ALTER SCHEMA saas por session_user=" + PG.getUsername()))
+                .as("OWNER").isGreaterThan(dono);
+        // Nada persistiu; controle: DDL comum do superusuario fora de saas nao alerta.
+        try (Connection c = superusuario(); Statement s = c.createStatement()) {
+            assertThat(texto(c, "SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname = 'saas'")).isEqualTo("saas_owner");
+            assertThat(texto(c, "SELECT to_regclass('saas.especialidade')::text")).isEqualTo("saas.especialidade");
+            s.execute("CREATE TABLE public.fora2_" + sufixo + " (id int)");
+            s.execute("ALTER TABLE public.fora2_" + sufixo + " SET SCHEMA " + outro);
+            s.execute("DROP TABLE " + outro + ".fora2_" + sufixo);
+        }
+        assertThat(esperaNoLog("fora2_" + sufixo)).isFalse();
+    }
+
     // ---------------------------------------------------------------- I-21
 
     @Test
@@ -257,6 +314,108 @@ class GatesBancoTest {
         assertThat(statusEnvio(tardio)).isEqualTo("FALHOU");
     }
 
+    /** F4.4 (tentativa 2): envio ja PREPARADO e ainda nao enviado nao sai nem e confirmado apos o cancelamento. */
+    @Test
+    void preparadoNaoEnviadoEhDerrubadoNoCancelamentoEResultadoNaoConfirma() throws Exception {
+        String pac;
+        try (Connection rec = recepcao()) {
+            pac = texto(rec, "SELECT saas.paciente_cadastra_na_clinica('Paciente Preparado', '+5581900000601', NULL, NULL, NULL)::text");
+            insereAgendamento(rec, pac, 30, "f44-p-a");
+            insereAgendamento(rec, pac, 31, "f44-p-b");
+        }
+        String agCancelado = agendamentoPorChave("f44-p-a");
+        String agAtivo = agendamentoPorChave("f44-p-b");
+        String conf = insereEnvio("CONFIRMACAO_AGENDAMENTO", pac, null, agCancelado);
+        String confAtivo = insereEnvio("CONFIRMACAO_AGENDAMENTO", pac, null, agAtivo);
+        try (Connection jobs = conecta("saas_jobs")) {
+            assertThat(prepara(jobs, conf)[0]).isEqualTo("+5581900000601");
+            assertThat(prepara(jobs, confAtivo)[0]).isEqualTo("+5581900000601");
+        }
+        assertThat(statusEnvio(conf)).isEqualTo("PREPARADO");
+        try (Connection rec = recepcao()) {
+            executa(rec, "UPDATE saas.agendamento SET status = 'CANCELADO' WHERE id = ?::uuid", agCancelado);
+        }
+        assertThat(statusEnvio(conf)).isEqualTo("FALHOU");
+        assertThat(statusEnvio(confAtivo)).isEqualTo("PREPARADO");
+        try (Connection jobs = conecta("saas_jobs")) {
+            assertThat(texto(jobs, "SELECT saas.jobs_envio_resultado(?::uuid, 'ACEITO', 'prov-ficticio')::text", conf))
+                    .isEqualTo("false");
+            assertThat(statusEnvio(conf)).isEqualTo("FALHOU");
+            // Controle: o agendamento ativo e confirmado normalmente.
+            executa(jobs, "SELECT saas.jobs_envio_resultado(?::uuid, 'ACEITO', 'prov-ficticio')", confAtivo);
+            assertThat(statusEnvio(confAtivo)).isEqualTo("ACEITO");
+        }
+        // O resultado rele o caso por conta propria: um PREPARADO de agendamento cancelado (estado forcado
+        // pelo superusuario, como se o gatilho nao tivesse rodado) vira FALHOU e nao e confirmado.
+        try (Connection c = superusuario()) {
+            executa(c, "UPDATE saas.envio_notificacao SET status = 'PREPARADO' WHERE id = ?::uuid", conf);
+        }
+        try (Connection jobs = conecta("saas_jobs")) {
+            assertThat(texto(jobs, "SELECT saas.jobs_envio_resultado(?::uuid, 'ENTREGUE', 'prov-ficticio')::text", conf))
+                    .isEqualTo("false");
+        }
+        assertThat(statusEnvio(conf)).isEqualTo("FALHOU");
+    }
+
+    /** F4.4 (tentativa 2): toda saida de AGENDADO derruba os envios; reagendamento derruba os PREPARADOS. */
+    @Test
+    void faltaRealizadoEReagendamentoDerrubamEnvios() throws Exception {
+        String pac;
+        try (Connection rec = recepcao()) {
+            pac = texto(rec, "SELECT saas.paciente_cadastra_na_clinica('Paciente Saidas', '+5581900000701', NULL, NULL, NULL)::text");
+            insereAgendamento(rec, pac, 40, "f44-s-faltou");
+            insereAgendamento(rec, pac, 41, "f44-s-realizado");
+            insereAgendamento(rec, pac, 42, "f44-s-reagendado");
+        }
+        String agFaltou = agendamentoPorChave("f44-s-faltou");
+        String agRealizado = agendamentoPorChave("f44-s-realizado");
+        String agReagendado = agendamentoPorChave("f44-s-reagendado");
+        String lembFaltou = insereEnvio("LEMBRETE", pac, null, agFaltou);
+        String lembRealizado = insereEnvio("LEMBRETE", pac, null, agRealizado);
+        String preparadoReag = insereEnvio("LEMBRETE", pac, null, agReagendado);
+        String pendenteReag = insereEnvio("CONFIRMACAO_AGENDAMENTO", pac, null, agReagendado);
+        try (Connection jobs = conecta("saas_jobs")) {
+            prepara(jobs, preparadoReag);
+        }
+        try (Connection rec = recepcao()) {
+            executa(rec, "UPDATE saas.agendamento SET status = 'FALTOU' WHERE id = ?::uuid", agFaltou);
+            executa(rec, "UPDATE saas.agendamento SET status = 'REALIZADO' WHERE id = ?::uuid", agRealizado);
+            executa(rec, "UPDATE saas.agendamento SET inicio = inicio + interval '1 day', fim = fim + interval '1 day' "
+                    + "WHERE id = ?::uuid", agReagendado);
+        }
+        assertThat(statusEnvio(lembFaltou)).isEqualTo("FALHOU");
+        assertThat(statusEnvio(lembRealizado)).isEqualTo("FALHOU");
+        assertThat(statusEnvio(preparadoReag)).isEqualTo("FALHOU");
+        // Controle: o PENDENTE do agendamento reagendado (ainda ativo) fica e o preparo rele o agendamento.
+        assertThat(statusEnvio(pendenteReag)).isEqualTo("PENDENTE");
+        try (Connection jobs = conecta("saas_jobs")) {
+            assertThat(prepara(jobs, pendenteReag)[0]).isEqualTo("+5581900000701");
+        }
+    }
+
+    /** F4.4 (tentativa 2): link ja PREPARADO de caso cancelado e derrubado e nao faz T2. */
+    @Test
+    void linkPreparadoDeCasoCanceladoNaoSaiNemFazT2() throws Exception {
+        String enc = criaEncaminhamento("Paciente Link Cancelado", "+5581900000801");
+        String envio;
+        try (Connection jobs = conecta("saas_jobs")) {
+            envio = texto(jobs, "SELECT saas.jobs_envio_link_paciente(?::uuid)::text", enc);
+            prepara(jobs, envio);
+        }
+        try (Connection c = encaminhador()) {
+            executa(c, "UPDATE saas.encaminhamento SET status = 'CANCELADO' WHERE id = ?::uuid", enc);
+        }
+        assertThat(statusEnvio(envio)).isEqualTo("FALHOU");
+        try (Connection jobs = conecta("saas_jobs")) {
+            assertThat(texto(jobs, "SELECT saas.jobs_envio_resultado(?::uuid, 'ACEITO', 'prov-ficticio')::text", envio))
+                    .isEqualTo("false");
+        }
+        try (Connection c = superusuario()) {
+            assertThat(texto(c, "SELECT status FROM saas.encaminhamento WHERE id = ?::uuid", enc)).isEqualTo("CANCELADO");
+        }
+        assertThat(statusEnvio(envio)).isEqualTo("FALHOU");
+    }
+
     // ---------------------------------------------------------------- E-09
 
     @Test
@@ -277,6 +436,43 @@ class GatesBancoTest {
         assertThat(esperaNoLog("destinatario_id=" + MEDICO_POUCO)).isFalse();
         assertThat(PG.getLogs().lines().filter(l -> l.contains("ALERTA_PREPARO_VOLUME"))
                 .noneMatch(l -> l.contains(TELEFONE_VOLUME) || l.contains("+55"))).isTrue();
+    }
+
+    /**
+     * E-09 (tentativa 2): o volume soma pelo telefone normalizado. Quatro destinatarios (tres
+     * profissionais e um paciente) com o mesmo numero em grafias diferentes, cinco preparos cada:
+     * nenhum passa de 20 sozinho, o contato sim. A linha nao traz o telefone.
+     */
+    @Test
+    void vintePreparosParaOMesmoTelefoneEmDestinatariosDiferentesAlertam() throws Exception {
+        String[] grafias = {"+55 (81) 98888-0007", "81 98888 0007", "081988880007", "5581988880007"};
+        String[] destinatarios = new String[4];
+        try (Connection c = superusuario()) {
+            for (int i = 0; i < 3; i++) {
+                destinatarios[i] = texto(c, "INSERT INTO saas.profissional(crm, crm_uf, nome, telefone, canal_verificado_em) "
+                        + "VALUES (?, 'PE', 'Dr Mesmo Numero', ?, now()) RETURNING id::text", "97000" + i, grafias[i]);
+            }
+            destinatarios[3] = texto(c, "INSERT INTO saas.paciente(nome, telefone) VALUES ('Paciente Mesmo Numero', ?) "
+                    + "RETURNING id::text", grafias[3]);
+        }
+        try (Connection jobs = conecta("saas_jobs")) {
+            for (int rodada = 0; rodada < 5; rodada++) {
+                for (int i = 0; i < 4; i++) {
+                    if (rodada == 4 && i == 3) {
+                        assertThat(esperaNoLog("para o mesmo contato, 4 destinatarios")).as("19 preparos").isFalse();
+                    }
+                    prepara(jobs, i < 3 ? insereEnvioProfissional(destinatarios[i]) : insereEnvioPacienteSemCaso(destinatarios[3]));
+                }
+            }
+        }
+        assertThat(esperaNoLog("ALERTA_PREPARO_VOLUME: 20 preparos em 1 hora para o mesmo contato, 4 destinatarios")).isTrue();
+        for (String d : destinatarios) {
+            assertThat(PG.getLogs().lines().noneMatch(l -> l.contains("ALERTA_PREPARO_VOLUME")
+                    && l.contains("hora para destinatario_tipo=") && l.contains("destinatario_id=" + d)))
+                    .as("sem alerta por destinatario").isTrue();
+        }
+        assertThat(PG.getLogs().lines().filter(l -> l.contains("ALERTA_PREPARO_VOLUME"))
+                .noneMatch(l -> l.contains("98888") || l.contains("988880007"))).isTrue();
     }
 
     // ---------------------------------------------------------------- auxiliares
@@ -343,6 +539,14 @@ class GatesBancoTest {
             return texto(c, "INSERT INTO saas.envio_notificacao(finalidade, canal, destinatario_tipo, destinatario_id, "
                     + "chave_idempotencia) VALUES ('AVISO_ORIGEM', 'WHATSAPP', 'PROFISSIONAL', ?::uuid, gen_random_uuid()::text) "
                     + "RETURNING id::text", profissional);
+        }
+    }
+
+    private static String insereEnvioPacienteSemCaso(String paciente) throws SQLException {
+        try (Connection c = superusuario()) {
+            return texto(c, "INSERT INTO saas.envio_notificacao(finalidade, canal, destinatario_tipo, destinatario_id, "
+                    + "chave_idempotencia) VALUES ('AVISO_ORIGEM', 'WHATSAPP', 'PACIENTE', ?::uuid, gen_random_uuid()::text) "
+                    + "RETURNING id::text", paciente);
         }
     }
 

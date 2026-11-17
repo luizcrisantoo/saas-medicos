@@ -8,11 +8,16 @@
 --        SECURITY DEFINER do papel web ja exigem sessao ou sao a entrada publica por token.
 --  O3:   paciente e encaminhador so veem profissional com canal verificado ou com
 --        usuario; a equipe continua vendo o cadastro inteiro (nome e CRM).
---  F4.4: cancelar agendamento (direto ou em cascata por T9, T10, T11) derruba os envios
---        CONFIRMACAO_AGENDAMENTO e LEMBRETE pendentes (FALHOU), e jobs_envio_prepara rele
---        o agendamento: fora de AGENDADO ou CONFIRMADO nada sai.
---  E-09: jobs_envio_prepara marca preparado_em e, a partir de 20 preparos para o mesmo
---        destinatario em 1 hora, grava ALERTA_PREPARO_VOLUME no log, sem contato nem segredo.
+--  F4.4: agendamento que sai de AGENDADO/CONFIRMADO (cancelado direto ou em cascata por T9,
+--        T10, T11, realizado ou falta) derruba confirmacao e lembrete PENDENTES e PREPARADOS
+--        ainda nao enviados (FALHOU); reagendamento (horario ou profissional) derruba os
+--        PREPARADOS (dado velho). Encaminhamento em estado final derruba os envios do caso
+--        ainda nao enviados. jobs_envio_prepara e jobs_envio_resultado releem o estado do
+--        agendamento e do encaminhamento: caso cancelado nao prepara nem confirma envio.
+--  E-09: jobs_envio_prepara marca preparado_em e, a partir de 20 preparos em 1 hora para o
+--        mesmo destinatario OU para o mesmo telefone normalizado (pacientes e casos somam),
+--        grava ALERTA_PREPARO_VOLUME no log, sem contato nem segredo. Limite e janela num so
+--        lugar (constantes c_volume_* em jobs_envio_prepara).
 --  R-08: o alerta de DDL e gatilho de evento (superusuario): fica em infra/db/bootstrap.sql.
 -- Executada pelo Flyway como saas_migracao; termina com RESET ROLE.
 -- Reversao: src/main/resources/db/reversao/V3__gates_banco.sql.
@@ -23,8 +28,7 @@ SET LOCAL search_path = saas, public;
 
 -- E-09: momento do preparo (o segredo saiu do banco). Sem contato gravado (ADR-0034).
 ALTER TABLE envio_notificacao ADD COLUMN preparado_em timestamptz;
-CREATE INDEX envio_preparo_destinatario_idx ON envio_notificacao (destinatario_tipo, destinatario_id, preparado_em)
-  WHERE preparado_em IS NOT NULL;
+CREATE INDEX envio_preparado_em_idx ON envio_notificacao (preparado_em) WHERE preparado_em IS NOT NULL;
 
 -- O3 (Red Team r1, N11d): cadastro sem canal verificado e sem usuario (inclusive o de
 -- quem tomou um CRM alheio) fica fora da visao de paciente e encaminhador.
@@ -49,65 +53,126 @@ $$ SELECT ator_tipo() IS NOT NULL
       AND EXISTS (SELECT 1 FROM flag_clinica f
                    WHERE f.clinica_id = p_clinica AND f.chave = 'REDE_ENCAMINHAMENTO' AND f.ligada) $$;
 
--- F4.4: agendamento cancelado derruba confirmacao e lembrete pendentes. SECURITY DEFINER
--- porque o papel web cancela (T11 direto ou UPDATE de status) e nao tem privilegio em
--- envio_notificacao. Vale para a cascata de encaminhamento_apos_transicao.
+-- E-09: telefone so com digitos, sem zeros a esquerda; numero nacional (10 ou 11 digitos,
+-- DDD + numero) ganha o 55. "+55 (81) 9 9999-0000", "081999990000" e "81999990000" somam
+-- no mesmo contato. So para contar volume: nunca gravado nem logado.
+CREATE FUNCTION telefone_normalizado(p text) RETURNS text LANGUAGE sql IMMUTABLE
+  SET search_path = saas, pg_temp AS
+$$ SELECT nullif(CASE WHEN d ~ '^[0-9]{10,11}$' THEN '55' || d ELSE d END, '')
+     FROM (SELECT ltrim(regexp_replace(coalesce(p, ''), '[^0-9]', '', 'g'), '0') AS d) s $$;
+REVOKE EXECUTE ON FUNCTION telefone_normalizado(text) FROM PUBLIC;
+
+-- I-22: contato de um envio, resolvido sempre do mesmo jeito (preparo e contagem de volume).
+-- Paciente ligado a caso (pelo envio ou, em confirmacao e lembrete, pelo agendamento): so o
+-- telefone de contato do caso, nunca o do cadastro. Paciente sem caso: o proprio cadastro.
+-- Profissional: o telefone do cadastro. Sem EXECUTE para papel de login.
+CREATE FUNCTION envio_contato(p_envio uuid) RETURNS text LANGUAGE plpgsql STABLE SECURITY DEFINER
+  SET search_path = saas, pg_temp AS
+$$ DECLARE v envio_notificacao; enc uuid; ct text;
+BEGIN
+  SELECT * INTO v FROM envio_notificacao WHERE id = p_envio;
+  IF v.id IS NULL THEN RETURN NULL; END IF;
+  enc := v.encaminhamento_id;
+  IF enc IS NULL AND v.finalidade IN ('CONFIRMACAO_AGENDAMENTO','LEMBRETE') THEN
+    SELECT a.encaminhamento_id INTO enc FROM agendamento a WHERE a.id = v.agendamento_id;
+  END IF;
+  IF v.destinatario_tipo = 'PACIENTE' AND enc IS NOT NULL THEN
+    SELECT e.telefone_contato INTO ct FROM encaminhamento e WHERE e.id = enc AND e.paciente_id = v.destinatario_id;
+  ELSIF v.destinatario_tipo = 'PACIENTE' THEN
+    SELECT telefone INTO ct FROM paciente WHERE id = v.destinatario_id;
+  ELSE
+    SELECT telefone INTO ct FROM profissional WHERE id = v.destinatario_id;
+  END IF;
+  RETURN ct;
+END $$;
+REVOKE EXECUTE ON FUNCTION envio_contato(uuid) FROM PUBLIC;
+
+-- F4.4 e r2-1: o caso do envio ainda admite que ele saia? Relido na fonte, no preparo e no
+-- resultado. Link so para CRIADO ou ENVIADO_AO_PACIENTE; codigo so com encaminhamento aberto;
+-- confirmacao e lembrete so com agendamento AGENDADO ou CONFIRMADO, do mesmo caso, do mesmo
+-- paciente destinatario e com o encaminhamento (se houver) aberto. Sem EXECUTE para login.
+CREATE FUNCTION envio_caso_ativo(p_envio uuid) RETURNS boolean LANGUAGE plpgsql STABLE SECURITY DEFINER
+  SET search_path = saas, pg_temp AS
+$$ DECLARE v envio_notificacao; a agendamento;
+BEGIN
+  SELECT * INTO v FROM envio_notificacao WHERE id = p_envio;
+  IF v.id IS NULL THEN RETURN false; END IF;
+  IF v.finalidade = 'LINK_PACIENTE' THEN
+    RETURN EXISTS (SELECT 1 FROM encaminhamento e WHERE e.id = v.encaminhamento_id
+                      AND e.status IN ('CRIADO','ENVIADO_AO_PACIENTE'));
+  ELSIF v.finalidade = 'CODIGO_PACIENTE' THEN
+    RETURN encaminhamento_aberto(v.encaminhamento_id);
+  ELSIF v.finalidade IN ('CONFIRMACAO_AGENDAMENTO','LEMBRETE') THEN
+    SELECT * INTO a FROM agendamento WHERE id = v.agendamento_id;
+    RETURN a.id IS NOT NULL AND a.status IN ('AGENDADO','CONFIRMADO')
+       AND NOT (v.destinatario_tipo = 'PACIENTE' AND a.paciente_id <> v.destinatario_id)
+       AND NOT (v.encaminhamento_id IS NOT NULL AND a.encaminhamento_id IS DISTINCT FROM v.encaminhamento_id)
+       AND (a.encaminhamento_id IS NULL OR encaminhamento_aberto(a.encaminhamento_id));
+  END IF;
+  RETURN true;
+END $$;
+REVOKE EXECUTE ON FUNCTION envio_caso_ativo(uuid) FROM PUBLIC;
+
+-- F4.4: agendamento que deixa de estar ativo (CANCELADO direto ou em cascata por T9, T10 e
+-- T11; REALIZADO; FALTOU) derruba confirmacao e lembrete PENDENTES e PREPARADOS ainda nao
+-- enviados (PREPARADO e o estado entre o preparo e o resultado do provedor). Reagendamento
+-- (horario ou profissional) derruba os PREPARADOS, que sairiam com o horario velho; os
+-- PENDENTES ficam, porque o preparo rele o agendamento. SECURITY DEFINER porque o papel web
+-- cancela e reagenda e nao tem privilegio em envio_notificacao.
 CREATE FUNCTION agendamento_cancela_envios() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
   SET search_path = saas, pg_temp AS
 $$ BEGIN
-  UPDATE envio_notificacao SET status = 'FALHOU', atualizado_em = now()
-   WHERE agendamento_id = NEW.id AND status = 'PENDENTE'
-     AND finalidade IN ('CONFIRMACAO_AGENDAMENTO','LEMBRETE');
+  IF NEW.status NOT IN ('AGENDADO','CONFIRMADO') THEN
+    UPDATE envio_notificacao SET status = 'FALHOU', atualizado_em = now()
+     WHERE agendamento_id = NEW.id AND status IN ('PENDENTE','PREPARADO')
+       AND finalidade IN ('CONFIRMACAO_AGENDAMENTO','LEMBRETE');
+  ELSE
+    UPDATE envio_notificacao SET status = 'FALHOU', atualizado_em = now()
+     WHERE agendamento_id = NEW.id AND status = 'PREPARADO'
+       AND finalidade IN ('CONFIRMACAO_AGENDAMENTO','LEMBRETE');
+  END IF;
   RETURN NULL;
 END $$;
 REVOKE EXECUTE ON FUNCTION agendamento_cancela_envios() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION agendamento_cancela_envios() TO saas_owner;
 
+-- F4.4 e r2-1: encaminhamento em estado final derruba tambem os envios do caso ja PREPARADOS
+-- e ainda nao enviados (a V1 so derrubava LINK e CODIGO PENDENTES).
+CREATE FUNCTION encaminhamento_derruba_envios() RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path = saas, pg_temp AS
+$$ BEGIN
+  UPDATE envio_notificacao SET status = 'FALHOU', atualizado_em = now()
+   WHERE encaminhamento_id = NEW.id AND status IN ('PENDENTE','PREPARADO')
+     AND finalidade IN ('LINK_PACIENTE','CODIGO_PACIENTE','CONFIRMACAO_AGENDAMENTO','LEMBRETE');
+  RETURN NULL;
+END $$;
+REVOKE EXECUTE ON FUNCTION encaminhamento_derruba_envios() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION encaminhamento_derruba_envios() TO saas_owner;
+
 -- Igual a V2, mais:
---  F4.4: confirmacao e lembrete exigem agendamento ativo (AGENDADO ou CONFIRMADO), do
---        proprio paciente destinatario; senao o envio vira FALHOU e nada sai.
---  I-22 mantido: envio ao paciente ligado a caso (pelo envio ou pelo agendamento) vai so ao
---        telefone de contato do caso; nunca ao telefone do cadastro como reserva.
---  E-09: preparado_em e alerta de volume por destinatario.
+--  F4.4: o caso tem que admitir o envio (envio_caso_ativo); senao FALHOU e nada sai.
+--  I-22 mantido: contato por envio_contato (caso pelo envio ou pelo agendamento: so o
+--        telefone de contato do caso).
+--  E-09: preparado_em e alerta de volume por destinatario e por telefone normalizado.
 CREATE OR REPLACE FUNCTION jobs_envio_prepara(p_envio uuid) RETURNS TABLE (canal text, contato text, segredo text)
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = saas, pg_temp AS
-$$ DECLARE v envio_notificacao; tok text; cod text; lid uuid; l link_paciente; d desafio_encaminhador; ct text;
-  a agendamento; enc uuid; n int;
+$$ DECLARE
+  -- E-09 (docs/fase2/spec.md, F4.5): 20 ou mais preparos em 1 hora. Unico lugar do limite.
+  c_volume_limite        CONSTANT int := 20;
+  c_volume_janela_horas  CONSTANT int := 1;
+  v envio_notificacao; tok text; cod text; lid uuid; l link_paciente; d desafio_encaminhador; ct text;
+  ctn text; n int; nc int; nd int;
 BEGIN
   SELECT * INTO v FROM envio_notificacao WHERE id = p_envio AND status = 'PENDENTE' AND tentativas < 5 FOR UPDATE;
   IF v.id IS NULL THEN RAISE EXCEPTION 'envio inexistente ou ja preparado'; END IF;
-  -- r2-1 (Testador F1): rele o encaminhamento. Link so para CRIADO ou ENVIADO_AO_PACIENTE (a
-  -- mesma regra de jobs_envio_link_paciente); codigo so com encaminhamento aberto. Fora disso
-  -- o envio vira FALHOU e nada sai: nem segredo, nem contato.
-  IF (v.finalidade = 'LINK_PACIENTE' AND NOT EXISTS (SELECT 1 FROM encaminhamento e WHERE e.id = v.encaminhamento_id
-                                                       AND e.status IN ('CRIADO','ENVIADO_AO_PACIENTE')))
-     OR (v.finalidade = 'CODIGO_PACIENTE' AND NOT encaminhamento_aberto(v.encaminhamento_id)) THEN
+  -- r2-1 e F4.4: caso relido na fonte. Fora de estado o envio vira FALHOU e nada sai:
+  -- nem segredo, nem contato.
+  IF NOT envio_caso_ativo(v.id) THEN
     UPDATE envio_notificacao SET status = 'FALHOU', atualizado_em = now() WHERE id = v.id;
     RETURN;
   END IF;
-  enc := v.encaminhamento_id;
-  -- F4.4: confirmacao e lembrete so com agendamento ativo, do mesmo caso e, se o destinatario
-  -- e paciente, do mesmo paciente.
-  IF v.finalidade IN ('CONFIRMACAO_AGENDAMENTO','LEMBRETE') THEN
-    SELECT * INTO a FROM agendamento WHERE id = v.agendamento_id;
-    IF a.id IS NULL OR a.status NOT IN ('AGENDADO','CONFIRMADO')
-       OR (v.destinatario_tipo = 'PACIENTE' AND a.paciente_id <> v.destinatario_id)
-       OR (v.encaminhamento_id IS NOT NULL AND a.encaminhamento_id IS DISTINCT FROM v.encaminhamento_id)
-       OR (a.encaminhamento_id IS NOT NULL AND NOT encaminhamento_aberto(a.encaminhamento_id)) THEN
-      UPDATE envio_notificacao SET status = 'FALHOU', atualizado_em = now() WHERE id = v.id;
-      RETURN;
-    END IF;
-    enc := coalesce(v.encaminhamento_id, a.encaminhamento_id);
-  END IF;
-  -- I-22: contato resolvido antes de gerar qualquer segredo. Caso pelo envio ou pelo agendamento.
-  IF v.destinatario_tipo = 'PACIENTE' AND enc IS NOT NULL THEN
-    SELECT e.telefone_contato INTO ct FROM encaminhamento e
-     WHERE e.id = enc AND e.paciente_id = v.destinatario_id;
-  ELSIF v.destinatario_tipo = 'PACIENTE' THEN
-    SELECT telefone INTO ct FROM paciente WHERE id = v.destinatario_id;      -- envio sem caso: o proprio cadastro
-  ELSE
-    SELECT telefone INTO ct FROM profissional WHERE id = v.destinatario_id;
-  END IF;
+  -- I-22: contato resolvido antes de gerar qualquer segredo.
+  ct := envio_contato(v.id);
   IF ct IS NULL OR btrim(ct) = '' THEN
     UPDATE envio_notificacao SET status = 'FALHOU', atualizado_em = now() WHERE id = v.id;
     PERFORM audita('ENVIO_SEM_CONTATO', 'envio_notificacao', v.id);
@@ -136,24 +201,69 @@ BEGIN
   END IF;
   UPDATE envio_notificacao SET status = 'PREPARADO', tentativas = tentativas + 1, preparado_em = clock_timestamp(),
          atualizado_em = now() WHERE id = v.id;
-  -- E-09: volume por destinatario (tipo e id) na ultima hora, contando este preparo. A linha
-  -- leva so ids e a contagem: nunca contato, token ou codigo.
-  SELECT count(*) INTO n FROM envio_notificacao x
-   WHERE x.destinatario_tipo = v.destinatario_tipo AND x.destinatario_id = v.destinatario_id
-     AND x.preparado_em > clock_timestamp() - interval '1 hour';
-  IF n >= 20 THEN
-    RAISE LOG 'ALERTA_PREPARO_VOLUME: % preparos em 1 hora para destinatario_tipo=% destinatario_id=% (envio=% finalidade=%)',
-      n, v.destinatario_tipo, v.destinatario_id, v.id, v.finalidade;
+  -- E-09: volume na janela, contando este preparo, por destinatario (tipo e id) e pelo telefone
+  -- normalizado (varios pacientes, casos ou profissionais com o mesmo numero somam; o contato de
+  -- cada envio e resolvido de novo por envio_contato, nada de contato gravado, ADR-0034).
+  -- A linha leva so ids e contagens: nunca contato, token ou codigo.
+  ctn := telefone_normalizado(ct);
+  SELECT count(*) FILTER (WHERE x.destinatario_tipo = v.destinatario_tipo AND x.destinatario_id = v.destinatario_id),
+         count(*) FILTER (WHERE ctn IS NOT NULL AND telefone_normalizado(envio_contato(x.id)) = ctn),
+         count(DISTINCT (x.destinatario_tipo, x.destinatario_id))
+               FILTER (WHERE ctn IS NOT NULL AND telefone_normalizado(envio_contato(x.id)) = ctn)
+    INTO n, nc, nd
+    FROM envio_notificacao x
+   WHERE x.preparado_em > clock_timestamp() - make_interval(hours => c_volume_janela_horas);
+  IF n >= c_volume_limite THEN
+    RAISE LOG 'ALERTA_PREPARO_VOLUME: % preparos em % hora para destinatario_tipo=% destinatario_id=% (envio=% finalidade=%)',
+      n, c_volume_janela_horas, v.destinatario_tipo, v.destinatario_id, v.id, v.finalidade;
+  END IF;
+  IF nc >= c_volume_limite AND nc > n THEN
+    RAISE LOG 'ALERTA_PREPARO_VOLUME: % preparos em % hora para o mesmo contato, % destinatarios (envio=% finalidade=% destinatario_tipo=% destinatario_id=%)',
+      nc, c_volume_janela_horas, nd, v.id, v.finalidade, v.destinatario_tipo, v.destinatario_id;
   END IF;
   RETURN QUERY SELECT v.canal, ct, tok;
+END $$;
+
+-- Igual a V1 (T2 so com LINK aceito e encaminhamento CRIADO), mais F4.4: o resultado rele o
+-- caso. Envio derrubado (FALHOU, por cancelamento ou estado final) nao e confirmado: devolve
+-- falso e nada muda. Envio PREPARADO cujo caso nao admite mais o envio vira FALHOU e devolve
+-- falso: ACEITO e ENTREGUE nunca sao gravados para caso cancelado.
+CREATE OR REPLACE FUNCTION jobs_envio_resultado(p_envio uuid, p_status text, p_id_provedor text) RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+  SET search_path = saas, pg_temp AS
+$$ DECLARE v envio_notificacao; n int;
+BEGIN
+  IF p_status NOT IN ('ACEITO','ENTREGUE','FALHOU') THEN RAISE EXCEPTION 'status invalido'; END IF;
+  SELECT * INTO v FROM envio_notificacao WHERE id = p_envio FOR UPDATE;
+  IF v.id IS NOT NULL AND v.status = 'FALHOU' THEN RETURN false; END IF;
+  IF v.id IS NULL OR v.status NOT IN ('PREPARADO','ACEITO') THEN RAISE EXCEPTION 'envio inexistente'; END IF;
+  IF v.status = 'PREPARADO' AND p_status <> 'FALHOU' AND NOT envio_caso_ativo(v.id) THEN
+    UPDATE envio_notificacao SET status = 'FALHOU', id_provedor = p_id_provedor, atualizado_em = now() WHERE id = v.id;
+    RETURN false;
+  END IF;
+  UPDATE envio_notificacao SET status = p_status, id_provedor = p_id_provedor, atualizado_em = now()
+   WHERE id = v.id RETURNING * INTO v;
+  IF v.finalidade = 'LINK_PACIENTE' AND p_status = 'ACEITO' THEN
+    PERFORM set_config('saas.transicao', 'T2', true);
+    UPDATE encaminhamento SET status = 'ENVIADO_AO_PACIENTE' WHERE id = v.encaminhamento_id AND status = 'CRIADO';
+    GET DIAGNOSTICS n = ROW_COUNT;
+    PERFORM set_config('saas.transicao', '', true);
+    RETURN n = 1;
+  END IF;
+  RETURN false;
 END $$;
 
 SET ROLE saas_owner;
 SET LOCAL search_path = saas, public;
 
 CREATE TRIGGER agendamento_cancela_envios
-  AFTER UPDATE OF status ON agendamento FOR EACH ROW
-  WHEN (NEW.status = 'CANCELADO' AND OLD.status IS DISTINCT FROM 'CANCELADO')
+  AFTER UPDATE OF status, inicio, fim, profissional_clinica_id ON agendamento FOR EACH ROW
+  WHEN ((NEW.status NOT IN ('AGENDADO','CONFIRMADO') AND OLD.status IN ('AGENDADO','CONFIRMADO'))
+        OR (NEW.inicio, NEW.fim, NEW.profissional_clinica_id) IS DISTINCT FROM (OLD.inicio, OLD.fim, OLD.profissional_clinica_id))
   EXECUTE FUNCTION agendamento_cancela_envios();
+
+CREATE TRIGGER encaminhamento_derruba_envios
+  AFTER UPDATE OF status ON encaminhamento FOR EACH ROW
+  WHEN (NEW.status IN ('CONTRARREFERIDO','EXPIRADO','CANCELADO') AND OLD.status IS DISTINCT FROM NEW.status)
+  EXECUTE FUNCTION encaminhamento_derruba_envios();
 
 RESET ROLE;

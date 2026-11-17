@@ -1,8 +1,11 @@
 -- =====================================================================
 -- Reversao de V3__gates_banco.sql (executada por saas_migracao, fora do Flyway).
 -- Devolve o schema saas exatamente ao estado da V2: rede_ligada com o texto da V1,
--- politicas de profissional com a expressao da V1, jobs_envio_prepara com o texto da V2 (copiado sem mudanca), sem o gatilho
--- agendamento_cancela_envios e sem a coluna envio_notificacao.preparado_em.
+-- politicas de profissional com a expressao da V1, jobs_envio_prepara com o texto da V2 e
+-- jobs_envio_resultado com o texto da V1 (copiados sem mudanca), sem os gatilhos
+-- agendamento_cancela_envios e encaminhamento_derruba_envios, sem as funcoes auxiliares
+-- (telefone_normalizado, envio_contato, envio_caso_ativo) e sem a coluna
+-- envio_notificacao.preparado_em.
 -- O alerta de DDL (R-08) fica no bootstrap: e do cluster, nao da versao do schema.
 -- Por fim apaga a linha da V3 no historico do Flyway.
 -- ATENCAO: reverter reabre os achados I-21, O3, E-09 (alerta de volume) e os envios
@@ -13,6 +16,7 @@ SET ROLE saas_owner;
 SET search_path = saas, public;
 
 DROP TRIGGER agendamento_cancela_envios ON agendamento;
+DROP TRIGGER encaminhamento_derruba_envios ON encaminhamento;
 
 ALTER POLICY profissional_ver ON profissional USING (ator_tipo() IS NOT NULL);
 ALTER POLICY profissional_especialidade_ver ON profissional_especialidade USING (ator_tipo() IS NOT NULL);
@@ -21,6 +25,7 @@ SET ROLE saas_funcoes;
 SET search_path = saas, public;
 
 DROP FUNCTION agendamento_cancela_envios();
+DROP FUNCTION encaminhamento_derruba_envios();
 
 CREATE OR REPLACE FUNCTION rede_ligada(p_clinica uuid) RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER
   SET search_path = saas, pg_temp AS
@@ -81,10 +86,33 @@ BEGIN
   RETURN QUERY SELECT v.canal, ct, tok;
 END $$;
 
+-- Texto da V1, sem mudanca.
+CREATE OR REPLACE FUNCTION jobs_envio_resultado(p_envio uuid, p_status text, p_id_provedor text) RETURNS boolean LANGUAGE plpgsql VOLATILE SECURITY DEFINER
+  SET search_path = saas, pg_temp AS
+$$ DECLARE v envio_notificacao; n int;
+BEGIN
+  IF p_status NOT IN ('ACEITO','ENTREGUE','FALHOU') THEN RAISE EXCEPTION 'status invalido'; END IF;
+  UPDATE envio_notificacao SET status = p_status, id_provedor = p_id_provedor, atualizado_em = now()
+   WHERE id = p_envio AND status IN ('PREPARADO','ACEITO') RETURNING * INTO v;
+  IF v.id IS NULL THEN RAISE EXCEPTION 'envio inexistente'; END IF;
+  IF v.finalidade = 'LINK_PACIENTE' AND p_status = 'ACEITO' THEN
+    PERFORM set_config('saas.transicao', 'T2', true);
+    UPDATE encaminhamento SET status = 'ENVIADO_AO_PACIENTE' WHERE id = v.encaminhamento_id AND status = 'CRIADO';
+    GET DIAGNOSTICS n = ROW_COUNT;
+    PERFORM set_config('saas.transicao', '', true);
+    RETURN n = 1;
+  END IF;
+  RETURN false;
+END $$;
+
+DROP FUNCTION envio_caso_ativo(uuid);
+DROP FUNCTION envio_contato(uuid);
+DROP FUNCTION telefone_normalizado(text);
+
 SET ROLE saas_owner;
 SET search_path = saas, public;
 
-DROP INDEX envio_preparo_destinatario_idx;
+DROP INDEX envio_preparado_em_idx;
 ALTER TABLE envio_notificacao DROP COLUMN preparado_em;
 
 RESET ROLE;
