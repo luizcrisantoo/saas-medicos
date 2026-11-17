@@ -1,0 +1,478 @@
+# diff do runner do Testador executado (infra + [4a] no caso da sessao, ver teste-r1-independente-r2.sql)
+8,9c8,9
+< RAIZ=/home/claude/saas-agenda; PGBIN=/usr/lib/postgresql/16/bin; DIR=$RAIZ/.pgtest2; PORTA=5496
+< EV=$RAIZ/docs/arquitetura/evidencias; SEG=$RAIZ/docs/seguranca/evidencias; LOG=$EV/teste-r1-independente.log
+---
+> RAIZ=/home/claude/saas-agenda; PGBIN=/usr/lib/postgresql/16/bin; DIR=$RAIZ/.pgexec2; PORTA=5494
+> EV=$RAIZ/docs/arquitetura/evidencias; SEG=$RAIZ/docs/seguranca/evidencias; LOG=$EV/teste-r1-independente-r2.log
+23c23
+< $PS -U pgtest -d r1 -v ON_ERROR_STOP=1 -f $EV/teste-rls-r1.sql > "$DIR/r1.out" 2>&1; echo "exit=$?"
+---
+> $PS -U pgtest -d r1 -v ON_ERROR_STOP=1 -f $EV/teste-rls-r2.sql > "$DIR/r1.out" 2>&1; echo "exit=$?"
+58c58
+< $PS -U pgtest -d novo -v ON_ERROR_STOP=1 -f $EV/teste-r1-independente.sql 2>&1; echo "exit=$?"
+---
+> $PS -U pgtest -d novo -v ON_ERROR_STOP=1 -f $EV/teste-r1-independente-r2.sql 2>&1; echo "exit=$?"
+74,75c74,75
+< update saas.encaminhamento set status='CANCELADO' where id='e1000000-0000-0000-0005-000000000004';
+< select 'T10 historico: ' || transicao || ' ator_tecnico=' || ator_tecnico || ' ator_tipo=' || ator_tipo || ' ator_id=' || ator_id from saas.historico_status_encaminhamento where encaminhamento_id='e1000000-0000-0000-0005-000000000004' and status_novo='CANCELADO';
+---
+> update saas.encaminhamento set status='CANCELADO' where id='e1000000-0000-0000-0005-000000000002';
+> select 'T10 historico: ' || transicao || ' ator_tecnico=' || ator_tecnico || ' ator_tipo=' || ator_tipo || ' ator_id=' || ator_id from saas.historico_status_encaminhamento where encaminhamento_id='e1000000-0000-0000-0005-000000000002' and status_novo='CANCELADO';
+# teste-r1-independente 2026-11-10T14:26:08Z
+# versao: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+## modelo-v2.sql do zero: exit=0
+
+## [1a] teste-rls-r1.sql (Executor) - resumo
+exit=0
+===== RESUMO POR SECAO =====
+  secao   | total | passou | falhou | info 
+----------+-------+--------+--------+------
+ a        |   261 |    261 |      0 |    0
+ auth     |     6 |      6 |      0 |    0
+ b        |   201 |    194 |      0 |    7
+ c        |   180 |    168 |      0 |   12
+ controle |    24 |     24 |      0 |    0
+ d        |     6 |      5 |      0 |    1
+ e        |    33 |     33 |      0 |    0
+ estados  |    14 |     14 |      0 |    0
+ f        |    61 |     58 |      0 |    3
+ jobs     |    46 |     46 |      0 |    0
+ matriz   |   392 |    392 |      0 |    0
+ r1-1     |    62 |     62 |      0 |    0
+ r1-10    |    12 |     12 |      0 |    0
+ r1-11    |     5 |      5 |      0 |    0
+ r1-12    |     5 |      5 |      0 |    0
+ r1-13    |    11 |     11 |      0 |    0
+ r1-14    |     4 |      4 |      0 |    0
+ r1-15    |     5 |      5 |      0 |    0
+ r1-17    |    10 |      9 |      0 |    1
+ r1-2     |     8 |      8 |      0 |    0
+ r1-3     |     6 |      6 |      0 |    0
+ r1-4     |     6 |      6 |      0 |    0
+ r1-5     |     3 |      3 |      0 |    0
+ r1-6     |     6 |      6 |      0 |    0
+ r1-7     |     7 |      7 |      0 |    0
+ r1-8     |     5 |      5 |      0 |    0
+ r1-9     |    44 |     44 |      0 |    0
+(27 rows)
+
+ total | passou | falhou | info | sondas_de_ataque_negadas | controles_positivos_ok 
+-------+--------+--------+------+--------------------------+------------------------
+  1423 |   1399 |      0 |   24 |                     1281 |                    117
+(1 row)
+
+
+===== FALHAS (esperado x obtido) =====
+===== FALHAS (esperado x obtido) =====
+ n | secao | nome | ctx | esperado | obtido 
+---+-------+------+-----+----------+--------
+(0 rows)
+
+
+===== INFO (so registro) =====
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls-r2.sql:1011: NOTICE:  tabelas alteradas apos todas as sondas: 0
+
+## [1b] red-team-sondas-r1.sql (Executor) - resumo
+exit=0
+ sondas_de_ataque | negadas | abertas | controles_positivos_ok 
+------------------+---------+---------+------------------------
+               26 |      26 |       0 |                      2
+(1 row)
+
+## [1c] red-team-sondas.sql ORIGINAL (rodada 0, intocado) contra o modelo r1
+exit=0
+
+## [2] diff de sondas rodada 0 (teste-rls.log) x r1 (teste-rls-r1.log): nome+esperado
+sondas r0: 275 r1: 517
+r0 sem par exato (secao,nome) em r1: 56
+   c | GUC clinica_id=abc em profissional_especialidade (global por desenho) | esperado r0: INFO | em r1 (outra secao/nome?): A
+   contr. | ADM_A ve linhas de A em usuario | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em clinica | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em usuario_clinica | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em flag_clinica | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em profissional_clinica | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em horario_atendimento | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em paciente | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em paciente_clinica | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em encaminhamento | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em historico_status_encaminhamento | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em consentimento | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em vaga_encaminhamento | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em agendamento | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em contrarreferencia | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em anexo_encaminhamento | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em evento_auditoria | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A ve linhas de A em clinica_especialidade | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | REC_A ve agendamento da propria clinica | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A insere agendamento na clinica A | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A atualiza agendamento da clinica A | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_B ve a propria clinica B | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A insere paciente_clinica(A) | esperado r0: POSITIVO | em r1 (outra secao/nome?): A
+   contr. | ADM_A insere evento_auditoria(clinica A) | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   contr. | ADM_A insere clinica_especialidade(A) | esperado r0: POSITIVO | em r1 (outra secao/nome?): [('controle', ('POSITIVO', 'PASSOU'))]
+   b | anexo de E1 invisivel (SISTEMA ve anexo PENDENTE de varredura em qualquer tenant | esperado r0: INFO | em r1 (outra secao/nome?): A
+   b | link publico ve so o proprio link | esperado r0: POSITIVO | em r1 (outra secao/nome?): A
+   b | link publico nao ve link de E2 | esperado r0: 0 | em r1 (outra secao/nome?): A
+   b | SISTEMA ve so expirados (E7) | esperado r0: POSITIVO | em r1 (outra secao/nome?): A
+   b | controle: MED_A grava contrarreferencia de E1 (destino A) | esperado r0: POSITIVO | em r1 (outra secao/nome?): A
+   f | FK simples: oraculo de existencia (UUID inexistente x existente em outro tenant) | esperado r0: INFO | em r1 (outra secao/nome?): A
+   f | FK simples: agendamento(A) origem ENCAMINHAMENTO apontando E2 (de B) | esperado r0: ERRO | em r1 (outra secao/nome?): A
+   f | paciente_clinica(A, pacB) por UUID: A passa a ler dados de pacB? | esperado r0: 0 | em r1 (outra secao/nome?): A
+   f | encaminhamento criado com paciente_id de B por UUID: origem passa a ler pacB? | esperado r0: 0 | em r1 (outra secao/nome?): A
+   f | mesmo vazamento por MEDICO da clinica A (papel MEDICO + profissional proprio) | esperado r0: 0 | em r1 (outra secao/nome?): A
+   f | UPDATE E1.paciente_id := pacB pela origem: origem passa a ler pacB? | esperado r0: 0 | em r1 (outra secao/nome?): A
+   f | consentimento forjado por PAC_A para E3 (de pacX): A passa a ver E3? | esperado r0: 0 | em r1 (outra secao/nome?): A
+   f | consentimento forjado por PAC_B para E1 (de pacA) em nome da clinica B: B passa  | esperado r0: 0 | em r1 (outra secao/nome?): A
+   f | historico forjado: PAC_A insere linha de historico em E1 (autor/papel livres) | esperado r0: ERRO | em r1 (outra secao/nome?): A
+   f | profissional global: A le telefone/e-mail de profissional so de B (INFO, global  | esperado r0: INFO | em r1 (outra secao/nome?): A
+   d | app.clinica_id apos COMMIT e vazio/nulo | esperado r0: vazio | em r1 (outra secao/nome?): A
+   d | CONTROLE NEGATIVO: set_config(...,false) vaza entre transacoes (pool!) | esperado r0: INFO | em r1 (outra secao/nome?): A
+   estad. | ENC_E: CRIADO -> ATENDIDO (pulo T4/T5, ator sem permissao) | esperado r0: INFO | em r1 (outra secao/nome?): [('estados', ('ERRO', 'PASSOU'))]
+   estad. | ENC_E: CRIADO -> CONTRARREFERIDO (origem finge contrarreferencia) | esperado r0: INFO | em r1 (outra secao/nome?): [('estados', ('ERRO', 'PASSOU'))]
+   estad. | PAC_A: CRIADO -> ATENDIDO | esperado r0: INFO | em r1 (outra secao/nome?): [('estados', ('ERRO', 'PASSOU'))]
+   estad. | PAC_A: CRIADO -> SOLICITADO sem passar por link/consentimento (T3 pulado) | esperado r0: INFO | em r1 (outra secao/nome?): A
+   estad. | ADM_A (destino): CRIADO -> AGENDADO sem agendamento | esperado r0: INFO | em r1 (outra secao/nome?): [('estados', ('ERRO', 'PASSOU'))]
+   estad. | ENC_E: estado final CANCELADO -> CRIADO (ressuscitar E6) | esperado r0: INFO | em r1 (outra secao/nome?): [('estados', ('ERRO', 'PASSOU'))]
+   estad. | ENC_E: estado final CANCELADO -> AGENDADO | esperado r0: INFO | em r1 (outra secao/nome?): [('estados', ('ERRO', 'PASSOU'))]
+   estad. | SISTEMA: expirado E7 -> ATENDIDO (so EXPIRADO permitido pela politica) | esperado r0: NEGADO | em r1 (outra secao/nome?): A
+   estad. | SISTEMA: expirado E7 -> EXPIRADO (T8, legitimo) | esperado r0: POSITIVO | em r1 (outra secao/nome?): A
+   estad. | SISTEMA: T8 sem WHERE na coluna lida (UPDATE ... SET status=EXPIRADO) | esperado r0: POSITIVO | em r1 (outra secao/nome?): A
+   estad. | SISTEMA: T8 por criterio expira_em < now() | esperado r0: POSITIVO | em r1 (outra secao/nome?): A
+   estad. | status fora dos 8 valores (CHECK) | esperado r0: ERRO | em r1 (outra secao/nome?): [('estados', ('ERRO', 'PASSOU'))]
+   estad. | INSERT direto em status AGENDADO (policy exige CRIADO) | esperado r0: ERRO | em r1 (outra secao/nome?): A
+   estad. | transicao ilegal deixa rastro no historico (gatilho registra de/para) | esperado r0: INFO | em r1 (outra secao/nome?): A
+esperado mudou: 4
+   c | ver link_paciente | 0 -> ERRO
+   a | ler por id (B) em link_paciente | 0 -> ERRO
+   a | listar tudo e cruzar com B em link_paciente | 0 -> ERRO
+   b | atualizar E1 | NEGADO -> INFO
+
+## [3] teste-r1-independente.sql (casos novos)
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:686: NOTICE:  B-agenda: UPDATE recusado: agendamento CANCELADO e final
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:705: NOTICE:  B-agenda: UPDATE recusado: agendamento REALIZADO e final
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "paciente_clinica"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "historico_status_encaminhamento"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "consentimento"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "link_paciente"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "agendamento"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "contrarreferencia"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "anexo_encaminhamento"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "envio_notificacao"
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-r1-independente-r2.sql:765: NOTICE:  truncate cascades to table "sessao"
+===== RESUMO POR SECAO =====
+      secao      | total | passou | falhou 
+-----------------+-------+--------+--------
+ B-agenda        |     4 |      4 |      0
+ B-delete-insert |    14 |     14 |      0
+ B-guc           |     7 |      7 |      0
+ B-historico     |     2 |      2 |      0
+ B-outra-coluna  |     7 |      7 |      0
+ B-sessao        |     7 |      7 |      0
+ F-T1            |     9 |      9 |      0
+ F-T3            |    10 |     10 |      0
+ F-T4            |    14 |     14 |      0
+ F-T5            |     8 |      8 |      0
+ F-T6            |    11 |     11 |      0
+ F-T7            |     6 |      6 |      0
+ F-T8            |     1 |      1 |      0
+ F-sistema       |     1 |      1 |      0
+ J-T2            |     2 |      2 |      0
+ J-envio         |     3 |      3 |      0
+ J-leitura       |     3 |      3 |      0
+ J-link          |     7 |      7 |      0
+ J-retorno       |     1 |      1 |      0
+ M-colunas       |    50 |     50 |      0
+ M-status        |  1475 |   1475 |      0
+ M-urgencia      |   184 |    184 |      0
+ P-coluna-SELECT |     9 |      9 |      0
+ P-coluna-UPDATE |   562 |    562 |      0
+ P-definer       |    39 |     39 |      0
+ P-funcao        |   216 |    216 |      0
+ P-papeis        |     4 |      4 |      0
+ P-pratica       |    21 |     21 |      0
+ P-tabela        |   672 |    672 |      0
+ S-escrita       |    72 |     72 |      0
+ S-inativo       |     4 |      4 |      0
+ S-leitura       |   180 |    180 |      0
+ S-lixo          |     3 |      3 |      0
+ S-tempo         |     1 |      1 |      0
+ S-vivo          |     3 |      3 |      0
+ Z-integridade   |     1 |      1 |      0
+(36 rows)
+
+===== FALHAS (esperado x obtido) =====
+ n | secao | nome | ctx | esperado | obtido 
+---+-------+------+-----+----------+--------
+(0 rows)
+
+===== INFO =====
+  n   |   secao   |                                    nome                                    |                  obtido                   
+------+-----------+----------------------------------------------------------------------------+-------------------------------------------
+ 1621 | S-leitura | ver profissional                                                           | OK n=6
+ 1623 | S-leitura | ver profissional_especialidade                                             | OK n=0
+ 1624 | S-leitura | ver usuario                                                                | OK n=1
+ 1625 | S-leitura | ver usuario_clinica                                                        | OK n=1
+ 1627 | S-leitura | catalogo_rede sem sessao valida devolve 0                                  | OK n=2
+ 1778 | S-lixo    | token com espaco no fim (decode hex ignora espaco): mesmo segredo, so INFO | OK n=3
+ 1785 | S-inativo | VINCULO_INATIVO (usuario ativo, vinculo inativo) le catalogo_rede (INFO)   | OK n=2
+ 1786 | S-tempo   | INFO: sessao vencida no meio da transacao (now() e o inicio da transacao)  | antes=1 depois_de_3s_com_sessao_vencida=1
+ 1787 | M-status  | ADM_A: CRIADO -> CRIADO                                                    | OK n=0
+ 1796 | M-status  | ADM_A: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 1805 | M-status  | ADM_A: SOLICITADO -> SOLICITADO                                            | OK n=1
+ 1814 | M-status  | ADM_A: AGENDADO -> AGENDADO                                                | OK n=1
+ 1823 | M-status  | ADM_A: ATENDIDO -> ATENDIDO                                                | OK n=1
+ 1832 | M-status  | ADM_A: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=1
+ 1841 | M-status  | ADM_A: EXPIRADO -> EXPIRADO                                                | OK n=1
+ 1850 | M-status  | ADM_A: CANCELADO -> CANCELADO                                              | OK n=1
+ 1851 | M-status  | ADM_B: CRIADO -> CRIADO                                                    | OK n=0
+ 1860 | M-status  | ADM_B: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 1869 | M-status  | ADM_B: SOLICITADO -> SOLICITADO                                            | OK n=0
+ 1878 | M-status  | ADM_B: AGENDADO -> AGENDADO                                                | OK n=0
+ 1887 | M-status  | ADM_B: ATENDIDO -> ATENDIDO                                                | OK n=0
+ 1896 | M-status  | ADM_B: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=0
+ 1905 | M-status  | ADM_B: EXPIRADO -> EXPIRADO                                                | OK n=0
+ 1914 | M-status  | ADM_B: CANCELADO -> CANCELADO                                              | OK n=0
+ 1915 | M-status  | ADM_B_NA_CLIN_A: CRIADO -> CRIADO                                          | OK n=0
+ 1924 | M-status  | ADM_B_NA_CLIN_A: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                | OK n=0
+ 1933 | M-status  | ADM_B_NA_CLIN_A: SOLICITADO -> SOLICITADO                                  | OK n=0
+ 1942 | M-status  | ADM_B_NA_CLIN_A: AGENDADO -> AGENDADO                                      | OK n=0
+ 1951 | M-status  | ADM_B_NA_CLIN_A: ATENDIDO -> ATENDIDO                                      | OK n=0
+ 1960 | M-status  | ADM_B_NA_CLIN_A: CONTRARREFERIDO -> CONTRARREFERIDO                        | OK n=0
+ 1969 | M-status  | ADM_B_NA_CLIN_A: EXPIRADO -> EXPIRADO                                      | OK n=0
+ 1978 | M-status  | ADM_B_NA_CLIN_A: CANCELADO -> CANCELADO                                    | OK n=0
+ 1979 | M-status  | ENC_O: CRIADO -> CRIADO                                                    | OK n=1
+ 1988 | M-status  | ENC_O: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=1
+ 1997 | M-status  | ENC_O: SOLICITADO -> SOLICITADO                                            | OK n=1
+ 2006 | M-status  | ENC_O: AGENDADO -> AGENDADO                                                | OK n=1
+ 2015 | M-status  | ENC_O: ATENDIDO -> ATENDIDO                                                | OK n=1
+ 2024 | M-status  | ENC_O: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=1
+ 2033 | M-status  | ENC_O: EXPIRADO -> EXPIRADO                                                | OK n=1
+ 2042 | M-status  | ENC_O: CANCELADO -> CANCELADO                                              | OK n=1
+ 2043 | M-status  | ENC_O_FINGE_ADMIN_A: CRIADO -> CRIADO                                      | OK n=1
+ 2052 | M-status  | ENC_O_FINGE_ADMIN_A: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE            | OK n=1
+ 2061 | M-status  | ENC_O_FINGE_ADMIN_A: SOLICITADO -> SOLICITADO                              | OK n=1
+ 2070 | M-status  | ENC_O_FINGE_ADMIN_A: AGENDADO -> AGENDADO                                  | OK n=1
+ 2079 | M-status  | ENC_O_FINGE_ADMIN_A: ATENDIDO -> ATENDIDO                                  | OK n=1
+ 2088 | M-status  | ENC_O_FINGE_ADMIN_A: CONTRARREFERIDO -> CONTRARREFERIDO                    | OK n=1
+ 2097 | M-status  | ENC_O_FINGE_ADMIN_A: EXPIRADO -> EXPIRADO                                  | OK n=1
+ 2106 | M-status  | ENC_O_FINGE_ADMIN_A: CANCELADO -> CANCELADO                                | OK n=1
+ 2107 | M-status  | ENC_X: CRIADO -> CRIADO                                                    | OK n=0
+ 2116 | M-status  | ENC_X: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 2125 | M-status  | ENC_X: SOLICITADO -> SOLICITADO                                            | OK n=0
+ 2134 | M-status  | ENC_X: AGENDADO -> AGENDADO                                                | OK n=0
+ 2143 | M-status  | ENC_X: ATENDIDO -> ATENDIDO                                                | OK n=0
+ 2152 | M-status  | ENC_X: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=0
+ 2161 | M-status  | ENC_X: EXPIRADO -> EXPIRADO                                                | OK n=0
+ 2170 | M-status  | ENC_X: CANCELADO -> CANCELADO                                              | OK n=0
+ 2171 | M-status  | MED_A: CRIADO -> CRIADO                                                    | OK n=0
+ 2180 | M-status  | MED_A: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 2189 | M-status  | MED_A: SOLICITADO -> SOLICITADO                                            | OK n=1
+ 2198 | M-status  | MED_A: AGENDADO -> AGENDADO                                                | OK n=1
+ 2207 | M-status  | MED_A: ATENDIDO -> ATENDIDO                                                | OK n=1
+ 2216 | M-status  | MED_A: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=1
+ 2225 | M-status  | MED_A: EXPIRADO -> EXPIRADO                                                | OK n=1
+ 2234 | M-status  | MED_A: CANCELADO -> CANCELADO                                              | OK n=1
+ 2235 | M-status  | MED_A2: CRIADO -> CRIADO                                                   | OK n=0
+ 2244 | M-status  | MED_A2: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                         | OK n=0
+ 2253 | M-status  | MED_A2: SOLICITADO -> SOLICITADO                                           | OK n=1
+ 2262 | M-status  | MED_A2: AGENDADO -> AGENDADO                                               | OK n=1
+ 2271 | M-status  | MED_A2: ATENDIDO -> ATENDIDO                                               | OK n=1
+ 2280 | M-status  | MED_A2: CONTRARREFERIDO -> CONTRARREFERIDO                                 | OK n=1
+ 2289 | M-status  | MED_A2: EXPIRADO -> EXPIRADO                                               | OK n=1
+ 2298 | M-status  | MED_A2: CANCELADO -> CANCELADO                                             | OK n=1
+ 2299 | M-status  | MED_B: CRIADO -> CRIADO                                                    | OK n=0
+ 2308 | M-status  | MED_B: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 2317 | M-status  | MED_B: SOLICITADO -> SOLICITADO                                            | OK n=0
+ 2326 | M-status  | MED_B: AGENDADO -> AGENDADO                                                | OK n=0
+ 2335 | M-status  | MED_B: ATENDIDO -> ATENDIDO                                                | OK n=0
+ 2344 | M-status  | MED_B: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=0
+ 2353 | M-status  | MED_B: EXPIRADO -> EXPIRADO                                                | OK n=0
+ 2362 | M-status  | MED_B: CANCELADO -> CANCELADO                                              | OK n=0
+ 2363 | M-status  | PAC_P: CRIADO -> CRIADO                                                    | OK n=0
+ 2372 | M-status  | PAC_P: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=1
+ 2381 | M-status  | PAC_P: SOLICITADO -> SOLICITADO                                            | OK n=0
+ 2390 | M-status  | PAC_P: AGENDADO -> AGENDADO                                                | OK n=0
+ 2399 | M-status  | PAC_P: ATENDIDO -> ATENDIDO                                                | OK n=0
+ 2408 | M-status  | PAC_P: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=0
+ 2417 | M-status  | PAC_P: EXPIRADO -> EXPIRADO                                                | OK n=0
+ 2426 | M-status  | PAC_P: CANCELADO -> CANCELADO                                              | OK n=0
+ 2427 | M-status  | PAC_P_EXPIRADA: CRIADO -> CRIADO                                           | OK n=0
+ 2436 | M-status  | PAC_P_EXPIRADA: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                 | OK n=0
+ 2445 | M-status  | PAC_P_EXPIRADA: SOLICITADO -> SOLICITADO                                   | OK n=0
+ 2454 | M-status  | PAC_P_EXPIRADA: AGENDADO -> AGENDADO                                       | OK n=0
+ 2463 | M-status  | PAC_P_EXPIRADA: ATENDIDO -> ATENDIDO                                       | OK n=0
+ 2472 | M-status  | PAC_P_EXPIRADA: CONTRARREFERIDO -> CONTRARREFERIDO                         | OK n=0
+ 2481 | M-status  | PAC_P_EXPIRADA: EXPIRADO -> EXPIRADO                                       | OK n=0
+ 2490 | M-status  | PAC_P_EXPIRADA: CANCELADO -> CANCELADO                                     | OK n=0
+ 2491 | M-status  | PAC_Q: CRIADO -> CRIADO                                                    | OK n=0
+ 2500 | M-status  | PAC_Q: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 2509 | M-status  | PAC_Q: SOLICITADO -> SOLICITADO                                            | OK n=0
+ 2518 | M-status  | PAC_Q: AGENDADO -> AGENDADO                                                | OK n=0
+ 2527 | M-status  | PAC_Q: ATENDIDO -> ATENDIDO                                                | OK n=0
+ 2536 | M-status  | PAC_Q: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=0
+ 2545 | M-status  | PAC_Q: EXPIRADO -> EXPIRADO                                                | OK n=0
+ 2554 | M-status  | PAC_Q: CANCELADO -> CANCELADO                                              | OK n=0
+ 2555 | M-status  | REC_A: CRIADO -> CRIADO                                                    | OK n=0
+ 2564 | M-status  | REC_A: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 2573 | M-status  | REC_A: SOLICITADO -> SOLICITADO                                            | OK n=1
+ 2582 | M-status  | REC_A: AGENDADO -> AGENDADO                                                | OK n=1
+ 2591 | M-status  | REC_A: ATENDIDO -> ATENDIDO                                                | OK n=1
+ 2600 | M-status  | REC_A: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=1
+ 2609 | M-status  | REC_A: EXPIRADO -> EXPIRADO                                                | OK n=1
+ 2618 | M-status  | REC_A: CANCELADO -> CANCELADO                                              | OK n=1
+ 2619 | M-status  | REC_A_FINGE_ADMIN: CRIADO -> CRIADO                                        | OK n=0
+ 2628 | M-status  | REC_A_FINGE_ADMIN: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE              | OK n=0
+ 2637 | M-status  | REC_A_FINGE_ADMIN: SOLICITADO -> SOLICITADO                                | OK n=0
+ 2646 | M-status  | REC_A_FINGE_ADMIN: AGENDADO -> AGENDADO                                    | OK n=0
+ 2655 | M-status  | REC_A_FINGE_ADMIN: ATENDIDO -> ATENDIDO                                    | OK n=0
+ 2664 | M-status  | REC_A_FINGE_ADMIN: CONTRARREFERIDO -> CONTRARREFERIDO                      | OK n=0
+ 2673 | M-status  | REC_A_FINGE_ADMIN: EXPIRADO -> EXPIRADO                                    | OK n=0
+ 2682 | M-status  | REC_A_FINGE_ADMIN: CANCELADO -> CANCELADO                                  | OK n=0
+ 2683 | M-status  | REC_A_NA_CLIN_B: CRIADO -> CRIADO                                          | OK n=0
+ 2692 | M-status  | REC_A_NA_CLIN_B: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                | OK n=0
+ 2701 | M-status  | REC_A_NA_CLIN_B: SOLICITADO -> SOLICITADO                                  | OK n=0
+ 2710 | M-status  | REC_A_NA_CLIN_B: AGENDADO -> AGENDADO                                      | OK n=0
+ 2719 | M-status  | REC_A_NA_CLIN_B: ATENDIDO -> ATENDIDO                                      | OK n=0
+ 2728 | M-status  | REC_A_NA_CLIN_B: CONTRARREFERIDO -> CONTRARREFERIDO                        | OK n=0
+ 2737 | M-status  | REC_A_NA_CLIN_B: EXPIRADO -> EXPIRADO                                      | OK n=0
+ 2746 | M-status  | REC_A_NA_CLIN_B: CANCELADO -> CANCELADO                                    | OK n=0
+ 2747 | M-status  | REC_B: CRIADO -> CRIADO                                                    | OK n=0
+ 2756 | M-status  | REC_B: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                          | OK n=0
+ 2765 | M-status  | REC_B: SOLICITADO -> SOLICITADO                                            | OK n=0
+ 2774 | M-status  | REC_B: AGENDADO -> AGENDADO                                                | OK n=0
+ 2783 | M-status  | REC_B: ATENDIDO -> ATENDIDO                                                | OK n=0
+ 2792 | M-status  | REC_B: CONTRARREFERIDO -> CONTRARREFERIDO                                  | OK n=0
+ 2801 | M-status  | REC_B: EXPIRADO -> EXPIRADO                                                | OK n=0
+ 2810 | M-status  | REC_B: CANCELADO -> CANCELADO                                              | OK n=0
+ 2811 | M-status  | SEM_SESSAO: CRIADO -> CRIADO                                               | OK n=0
+ 2820 | M-status  | SEM_SESSAO: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                     | OK n=0
+ 2829 | M-status  | SEM_SESSAO: SOLICITADO -> SOLICITADO                                       | OK n=0
+ 2838 | M-status  | SEM_SESSAO: AGENDADO -> AGENDADO                                           | OK n=0
+ 2847 | M-status  | SEM_SESSAO: ATENDIDO -> ATENDIDO                                           | OK n=0
+ 2856 | M-status  | SEM_SESSAO: CONTRARREFERIDO -> CONTRARREFERIDO                             | OK n=0
+ 2865 | M-status  | SEM_SESSAO: EXPIRADO -> EXPIRADO                                           | OK n=0
+ 2874 | M-status  | SEM_SESSAO: CANCELADO -> CANCELADO                                         | OK n=0
+ 2875 | M-status  | SESSAO_EXPIRADA: CRIADO -> CRIADO                                          | OK n=0
+ 2884 | M-status  | SESSAO_EXPIRADA: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                | OK n=0
+ 2893 | M-status  | SESSAO_EXPIRADA: SOLICITADO -> SOLICITADO                                  | OK n=0
+ 2902 | M-status  | SESSAO_EXPIRADA: AGENDADO -> AGENDADO                                      | OK n=0
+ 2911 | M-status  | SESSAO_EXPIRADA: ATENDIDO -> ATENDIDO                                      | OK n=0
+ 2920 | M-status  | SESSAO_EXPIRADA: CONTRARREFERIDO -> CONTRARREFERIDO                        | OK n=0
+ 2929 | M-status  | SESSAO_EXPIRADA: EXPIRADO -> EXPIRADO                                      | OK n=0
+ 2938 | M-status  | SESSAO_EXPIRADA: CANCELADO -> CANCELADO                                    | OK n=0
+ 2939 | M-status  | SESSAO_REVOGADA: CRIADO -> CRIADO                                          | OK n=0
+ 2948 | M-status  | SESSAO_REVOGADA: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                | OK n=0
+ 2957 | M-status  | SESSAO_REVOGADA: SOLICITADO -> SOLICITADO                                  | OK n=0
+ 2966 | M-status  | SESSAO_REVOGADA: AGENDADO -> AGENDADO                                      | OK n=0
+ 2975 | M-status  | SESSAO_REVOGADA: ATENDIDO -> ATENDIDO                                      | OK n=0
+ 2984 | M-status  | SESSAO_REVOGADA: CONTRARREFERIDO -> CONTRARREFERIDO                        | OK n=0
+ 2993 | M-status  | SESSAO_REVOGADA: EXPIRADO -> EXPIRADO                                      | OK n=0
+ 3002 | M-status  | SESSAO_REVOGADA: CANCELADO -> CANCELADO                                    | OK n=0
+ 3003 | M-status  | TOKEN_ALEATORIO: CRIADO -> CRIADO                                          | OK n=0
+ 3012 | M-status  | TOKEN_ALEATORIO: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                | OK n=0
+ 3021 | M-status  | TOKEN_ALEATORIO: SOLICITADO -> SOLICITADO                                  | OK n=0
+ 3030 | M-status  | TOKEN_ALEATORIO: AGENDADO -> AGENDADO                                      | OK n=0
+ 3039 | M-status  | TOKEN_ALEATORIO: ATENDIDO -> ATENDIDO                                      | OK n=0
+ 3048 | M-status  | TOKEN_ALEATORIO: CONTRARREFERIDO -> CONTRARREFERIDO                        | OK n=0
+ 3057 | M-status  | TOKEN_ALEATORIO: EXPIRADO -> EXPIRADO                                      | OK n=0
+ 3066 | M-status  | TOKEN_ALEATORIO: CANCELADO -> CANCELADO                                    | OK n=0
+ 3067 | M-status  | TOKEN_VAZIO: CRIADO -> CRIADO                                              | OK n=0
+ 3076 | M-status  | TOKEN_VAZIO: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                    | OK n=0
+ 3085 | M-status  | TOKEN_VAZIO: SOLICITADO -> SOLICITADO                                      | OK n=0
+ 3094 | M-status  | TOKEN_VAZIO: AGENDADO -> AGENDADO                                          | OK n=0
+ 3103 | M-status  | TOKEN_VAZIO: ATENDIDO -> ATENDIDO                                          | OK n=0
+ 3112 | M-status  | TOKEN_VAZIO: CONTRARREFERIDO -> CONTRARREFERIDO                            | OK n=0
+ 3121 | M-status  | TOKEN_VAZIO: EXPIRADO -> EXPIRADO                                          | OK n=0
+ 3130 | M-status  | TOKEN_VAZIO: CANCELADO -> CANCELADO                                        | OK n=0
+ 3131 | M-status  | USR_INATIVO: CRIADO -> CRIADO                                              | OK n=0
+ 3140 | M-status  | USR_INATIVO: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                    | OK n=0
+ 3149 | M-status  | USR_INATIVO: SOLICITADO -> SOLICITADO                                      | OK n=0
+ 3158 | M-status  | USR_INATIVO: AGENDADO -> AGENDADO                                          | OK n=0
+ 3167 | M-status  | USR_INATIVO: ATENDIDO -> ATENDIDO                                          | OK n=0
+ 3176 | M-status  | USR_INATIVO: CONTRARREFERIDO -> CONTRARREFERIDO                            | OK n=0
+ 3185 | M-status  | USR_INATIVO: EXPIRADO -> EXPIRADO                                          | OK n=0
+ 3194 | M-status  | USR_INATIVO: CANCELADO -> CANCELADO                                        | OK n=0
+ 3195 | M-status  | VINCULO_INATIVO: CRIADO -> CRIADO                                          | OK n=0
+ 3204 | M-status  | VINCULO_INATIVO: ENVIADO_AO_PACIENTE -> ENVIADO_AO_PACIENTE                | OK n=0
+ 3213 | M-status  | VINCULO_INATIVO: SOLICITADO -> SOLICITADO                                  | OK n=0
+ 3222 | M-status  | VINCULO_INATIVO: AGENDADO -> AGENDADO                                      | OK n=0
+ 3231 | M-status  | VINCULO_INATIVO: ATENDIDO -> ATENDIDO                                      | OK n=0
+ 3240 | M-status  | VINCULO_INATIVO: CONTRARREFERIDO -> CONTRARREFERIDO                        | OK n=0
+ 3249 | M-status  | VINCULO_INATIVO: EXPIRADO -> EXPIRADO                                      | OK n=0
+ 3258 | M-status  | VINCULO_INATIVO: CANCELADO -> CANCELADO                                    | OK n=0
+(192 rows)
+
+ total | passou | falhou 
+-------+--------+--------
+  3613 |   3613 |      0
+(1 row)
+
+===== FIM =====
+exit=0
+
+## [4] com LOGIN REAL (nao via SET ROLE de superusuario): escalada de papel, ator_tecnico, jobs e concorrencia no mesmo pool
+saas_app | set role saas_funcoes => ERROR:  permission denied to set role "saas_funcoes"
+saas_app | set role saas_owner => ERROR:  permission denied to set role "saas_owner"
+saas_app | set role pgtest => ERROR:  permission denied to set role "pgtest"
+saas_app | set session authorization saas_funcoes => ERROR:  permission denied to set session authorization "saas_funcoes"
+saas_app | create table public.x(i int) => ERROR:  permission denied for schema public
+saas_app | create schema evil => ERROR:  permission denied for database novo
+saas_app | alter role saas_app superuser => ERROR:  permission denied to alter role
+saas_app | set session_replication_role = replica => ERROR:  permission denied to set parameter "session_replication_role"
+saas_app | copy saas.paciente to program 'id' => ERROR:  permission denied to COPY to or from an external program
+saas_jobs | set role saas_funcoes => ERROR:  permission denied to set role "saas_funcoes"
+saas_jobs | set role saas_owner => ERROR:  permission denied to set role "saas_owner"
+saas_jobs | set role pgtest => ERROR:  permission denied to set role "pgtest"
+saas_jobs | set session authorization saas_funcoes => ERROR:  permission denied to set session authorization "saas_funcoes"
+saas_jobs | create table public.x(i int) => ERROR:  permission denied for schema public
+saas_jobs | create schema evil => ERROR:  permission denied for database novo
+saas_jobs | alter role saas_jobs superuser => ERROR:  permission denied to alter role
+saas_jobs | set session_replication_role = replica => ERROR:  permission denied to set parameter "session_replication_role"
+saas_jobs | copy saas.paciente to program 'id' => ERROR:  permission denied to COPY to or from an external program
+saas_auth | set role saas_funcoes => ERROR:  permission denied to set role "saas_funcoes"
+saas_auth | set role saas_owner => ERROR:  permission denied to set role "saas_owner"
+saas_auth | set role pgtest => ERROR:  permission denied to set role "pgtest"
+saas_auth | set session authorization saas_funcoes => ERROR:  permission denied to set session authorization "saas_funcoes"
+saas_auth | create table public.x(i int) => ERROR:  permission denied for schema public
+saas_auth | create schema evil => ERROR:  permission denied for database novo
+saas_auth | alter role saas_auth superuser => ERROR:  permission denied to alter role
+saas_auth | set session_replication_role = replica => ERROR:  permission denied to set parameter "session_replication_role"
+saas_auth | copy saas.paciente to program 'id' => ERROR:  permission denied to COPY to or from an external program
+
+-- [4a] ator_tecnico real no historico de T10 (login saas_app) e no de T8 (login saas_jobs)
+BEGIN
+UPDATE 1
+T10 historico: T10 ator_tecnico=saas_app ator_tipo=PACIENTE ator_id=c0000000-0000-0000-0003-000000000001
+ROLLBACK
+
+-- [4b] pool: UMA conexao saas_app reaproveitada por clinica A, clinica B e sem contexto, em ordem aleatoria (pgbench -M prepared); falha = divisao por zero se vazar
+pgbench A+B+sem contexto, 1 conexao, 6000 transacoes:
+number of transactions actually processed: 6000/6000
+number of failed transactions: 0 (0.000%)
+ - number of failed transactions: 0 (0.000%)
+ - number of failed transactions: 0 (0.000%)
+pgbench A+B+sem contexto, 8 conexoes paralelas, 8s:
+number of transactions actually processed: 2366
+number of failed transactions: 0 (0.000%)
+ - number of failed transactions: 0 (0.000%)
+ - number of failed transactions: 0 (0.000%)
+CONTROLE NEGATIVO (deve abortar):
+pgbench: error: client 0 script 0 aborted in command 2 query 0: ERROR:  division by zero
+number of transactions actually processed: 0/50
+number of failed transactions: 0 (NaN%)
+pgbench: error: Run was aborted; the above results are incomplete.
+
+-- [4c] corrida: dois pacientes/duas clinicas tentando o mesmo T3 ao mesmo tempo (FOR UPDATE)
+sessao1: BEGIN
+sessao1: bbd06ce43f21fa422a1873f2e008bc77
+sessao1: 
+sessao1: 
+sessao1: COMMIT
+sessao2: BEGIN
+sessao2: bbd06ce43f21fa422a1873f2e008bc77
+sessao2: ERROR:  nao permitido
+estado final: destino=aaaaaaaa-0000-0000-0000-000000000001 status=SOLICITADO consentimentos=1 consentimento_na_clinica_destino=1
+## desligando
+waiting for server to shut down.... done
+server stopped

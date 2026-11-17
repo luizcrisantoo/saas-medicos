@@ -1,0 +1,1082 @@
+# teste-rls 2026-11-10T13:02:58Z
+# comando: bash docs/arquitetura/evidencias/teste-rls.sh
+waiting for server to start.... done
+server started
+# versao: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+CREATE DATABASE
+## aplicando modelo-v2.sql
+modelo-v2.sql exit=0
+## teste-rls.sql (papel saas_app)
+
+===== PARTE 2: testes como saas_app =====
+ papel_de_conexao | rolsuper | rolbypassrls | tabelas_de_propriedade_do_app 
+------------------+----------+--------------+-------------------------------
+ saas_app         | f        | f            |                             0
+(1 row)
+
+ tabelas_com_rls | todas_com_force 
+-----------------+-----------------
+              20 | t
+(1 row)
+
+    gatilho_em_encaminhamento     |                                                                        definicao                                                                        
+----------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------
+ encaminhamento_historico_criacao | CREATE TRIGGER encaminhamento_historico_criacao AFTER INSERT ON saas.encaminhamento FOR EACH ROW EXECUTE FUNCTION registra_historico_criacao()
+ encaminhamento_historico_status  | CREATE TRIGGER encaminhamento_historico_status BEFORE UPDATE OF status ON saas.encaminhamento FOR EACH ROW EXECUTE FUNCTION registra_historico_status()
+(2 rows)
+
+ constraint_em_encaminhamento  |                                                                                             definicao                                                                                             
+-------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ encaminhamento_check          | CHECK (((profissional_destino_id IS NULL) OR (clinica_destino_id IS NOT NULL)))
+ encaminhamento_status_check   | CHECK ((status = ANY (ARRAY['CRIADO'::text, 'ENVIADO_AO_PACIENTE'::text, 'SOLICITADO'::text, 'AGENDADO'::text, 'ATENDIDO'::text, 'CONTRARREFERIDO'::text, 'EXPIRADO'::text, 'CANCELADO'::text])))
+ encaminhamento_urgencia_check | CHECK ((urgencia = ANY (ARRAY['ROTINA'::text, 'PRIORITARIA'::text, 'URGENTE'::text])))
+(3 rows)
+
+
+===== RESUMO POR SECAO =====
+  secao   | total | passou | falhou | info 
+----------+-------+--------+--------+------
+ a        |   261 |    261 |      0 |    0
+ b        |   152 |    146 |      0 |    6
+ c        |   159 |    146 |      1 |   12
+ controle |    24 |     24 |      0 |    0
+ d        |     6 |      5 |      0 |    1
+ e        |    33 |     33 |      0 |    0
+ estados  |    14 |      4 |      2 |    8
+ f        |    61 |     46 |     12 |    3
+(8 rows)
+
+
+===== FALHAS (esperado x obtido) =====
+  n  |  secao  |                                     nome                                      |     ctx      | esperado |                                    obtido                                    
+-----+---------+-------------------------------------------------------------------------------+--------------+----------+------------------------------------------------------------------------------
+  50 | c       | ver clinica_especialidade                                                     | SO_CLINICA_A | 0        | 1
+ 676 | f       | FK simples: agendamento(A) -> paciente_id de paciente so de B                 | ADM_A        | ERRO     | 1
+ 678 | f       | FK simples: agendamento(A) origem ENCAMINHAMENTO apontando E2 (de B)          | ADM_A        | ERRO     | 1
+ 679 | f       | paciente_clinica(A, pacB) por UUID: A passa a ler dados de pacB?              | REC_A        | 0        | 1
+ 680 | f       | encaminhamento criado com paciente_id de B por UUID: origem passa a ler pacB? | ENC_E        | 0        | 1
+ 681 | f       | mesmo vazamento por MEDICO da clinica A (papel MEDICO + profissional proprio) | MED_A        | 0        | 1
+ 682 | f       | UPDATE E1.paciente_id := pacB pela origem: origem passa a ler pacB?           | ENC_E        | 0        | 1
+ 683 | f       | consentimento forjado por PAC_A para E3 (de pacX): A passa a ver E3?          | PAC_A        | 0        | 1
+ 685 | f       | historico forjado: PAC_A insere linha de historico em E1 (autor/papel livres) | PAC_A        | ERRO     | 1
+ 686 | f       | historico forjado: ENC_E insere linha de historico em E1                      | ENC_E        | ERRO     | 1
+ 687 | f       | PAC_A altera motivo_cifrado de E1 (dado clinico do medico)                    | PAC_A        | NEGADO   | 1
+ 688 | f       | destino (ADM_A) altera motivo_cifrado de E1                                   | ADM_A        | NEGADO   | 1
+ 689 | f       | PAC_A troca profissional_origem_id de E1 por si/outro                         | PAC_A        | NEGADO   | 1
+ 705 | estados | SISTEMA: expirado E7 -> EXPIRADO (T8, legitimo)                               | SISTEMA      | POSITIVO | ERRO[42501]: new row violates row-level security policy for table "encaminha.
+     |         |                                                                               |              |          |.mento"
+ 707 | estados | SISTEMA: T8 por criterio expira_em < now()                                    | SISTEMA      | POSITIVO | ERRO[42501]: new row violates row-level security policy for table "encaminha.
+     |         |                                                                               |              |          |.mento"
+(15 rows)
+
+
+===== INFO (so registro; maquina de estados, catalogo global, controles) =====
+  n  |  secao  |                                              nome                                              |       ctx        |                               obtido                               
+-----+---------+------------------------------------------------------------------------------------------------+------------------+--------------------------------------------------------------------
+  84 | c       | ver profissional (global/proprio por desenho)                                                  | SO_PAPEL_ADMIN   | 4
+  86 | c       | ver profissional_especialidade (global/proprio por desenho)                                    | SO_PAPEL_ADMIN   | 2
+ 107 | c       | ver profissional (global/proprio por desenho)                                                  | USU_SEM_CLINICA  | 4
+ 109 | c       | ver profissional_especialidade (global/proprio por desenho)                                    | USU_SEM_CLINICA  | 2
+ 110 | c       | ver usuario (global/proprio por desenho)                                                       | USU_SEM_CLINICA  | 1
+ 111 | c       | ver usuario_clinica (global/proprio por desenho)                                               | USU_SEM_CLINICA  | 1
+ 130 | c       | ver profissional (global/proprio por desenho)                                                  | CLIN_INEXISTENTE | 4
+ 132 | c       | ver profissional_especialidade (global/proprio por desenho)                                    | CLIN_INEXISTENTE | 2
+ 133 | c       | ver usuario (global/proprio por desenho)                                                       | CLIN_INEXISTENTE | 1
+ 134 | c       | ver usuario_clinica (global/proprio por desenho)                                               | CLIN_INEXISTENTE | 1
+ 153 | c       | GUC clinica_id=abc em profissional (global por desenho)                                        | GUC_LIXO         | 4
+ 155 | c       | GUC clinica_id=abc em profissional_especialidade (global por desenho)                          | GUC_LIXO         | 2
+ 450 | b       | atualizar E1                                                                                   | ENC_E            | 1
+ 456 | b       | atualizar E1                                                                                   | ADM_A            | 1
+ 462 | b       | atualizar E1                                                                                   | REC_A            | 1
+ 468 | b       | atualizar E1                                                                                   | MED_A            | 1
+ 474 | b       | atualizar E1                                                                                   | PAC_A            | 1
+ 519 | b       | anexo de E1 invisivel (SISTEMA ve anexo PENDENTE de varredura em qualquer tenant, por desenho) | SISTEMA          | 1
+ 636 | f       | clinica_id NULL em evento_auditoria (permitido por desenho)                                    | ADM_A            | 1
+ 677 | f       | FK simples: oraculo de existencia (UUID inexistente x existente em outro tenant)               | ADM_A            | ERRO[23503]: insert or update on table "agendamento" violates fore.
+     |         |                                                                                                |                  |.ign key constraint "agendamento_paciente_id_fkey"
+ 690 | f       | profissional global: A le telefone/e-mail de profissional so de B (INFO, global por desenho)   | ADM_A            | 1
+ 695 | d       | CONTROLE NEGATIVO: set_config(...,false) vaza entre transacoes (pool!)                         | sessao           | 1
+ 697 | estados | ENC_E: CRIADO -> ATENDIDO (pulo T4/T5, ator sem permissao)                                     | ENC_E            | 1
+ 698 | estados | ENC_E: CRIADO -> CONTRARREFERIDO (origem finge contrarreferencia)                              | ENC_E            | 1
+ 699 | estados | PAC_A: CRIADO -> ATENDIDO                                                                      | PAC_A            | 1
+ 700 | estados | PAC_A: CRIADO -> SOLICITADO sem passar por link/consentimento (T3 pulado)                      | PAC_A            | 1
+ 701 | estados | ADM_A (destino): CRIADO -> AGENDADO sem agendamento                                            | ADM_A            | 1
+ 702 | estados | ENC_E: estado final CANCELADO -> CRIADO (ressuscitar E6)                                       | ENC_E            | 1
+ 703 | estados | ENC_E: estado final CANCELADO -> AGENDADO                                                      | ENC_E            | 1
+ 710 | estados | transicao ilegal deixa rastro no historico (gatilho registra de/para)                          | ENC_E            | 1
+(30 rows)
+
+
+===== TODAS AS SONDAS =====
+  n  | secao | resultado |                                          nome                                           |        ctx        | esperado |                       obtido                        
+-----+-------+-----------+-----------------------------------------------------------------------------------------+-------------------+----------+-----------------------------------------------------
+   1 | c     | PASSOU    | ver agendamento                                                                         | NUNCA             | 0        | 0
+   2 | c     | PASSOU    | ver anexo_encaminhamento                                                                | NUNCA             | 0        | 0
+   3 | c     | PASSOU    | ver clinica                                                                             | NUNCA             | 0        | 0
+   4 | c     | PASSOU    | ver clinica_especialidade                                                               | NUNCA             | 0        | 0
+   5 | c     | PASSOU    | ver consentimento                                                                       | NUNCA             | 0        | 0
+   6 | c     | PASSOU    | ver contrarreferencia                                                                   | NUNCA             | 0        | 0
+   7 | c     | PASSOU    | ver encaminhamento                                                                      | NUNCA             | 0        | 0
+   8 | c     | PASSOU    | ver evento_auditoria                                                                    | NUNCA             | 0        | 0
+   9 | c     | PASSOU    | ver flag_clinica                                                                        | NUNCA             | 0        | 0
+  10 | c     | PASSOU    | ver historico_status_encaminhamento                                                     | NUNCA             | 0        | 0
+  11 | c     | PASSOU    | ver horario_atendimento                                                                 | NUNCA             | 0        | 0
+  12 | c     | PASSOU    | ver link_paciente                                                                       | NUNCA             | 0        | 0
+  13 | c     | PASSOU    | ver paciente                                                                            | NUNCA             | 0        | 0
+  14 | c     | PASSOU    | ver paciente_clinica                                                                    | NUNCA             | 0        | 0
+  15 | c     | PASSOU    | ver profissional                                                                        | NUNCA             | 0        | 0
+  16 | c     | PASSOU    | ver profissional_clinica                                                                | NUNCA             | 0        | 0
+  17 | c     | PASSOU    | ver profissional_especialidade                                                          | NUNCA             | 0        | 0
+  18 | c     | PASSOU    | ver usuario                                                                             | NUNCA             | 0        | 0
+  19 | c     | PASSOU    | ver usuario_clinica                                                                     | NUNCA             | 0        | 0
+  20 | c     | PASSOU    | ver vaga_encaminhamento                                                                 | NUNCA             | 0        | 0
+  21 | c     | PASSOU    | inserir agendamento                                                                     | NUNCA             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+  22 | c     | PASSOU    | atualizar agendamento                                                                   | NUNCA             | NEGADO   | 0
+  23 | c     | PASSOU    | atualizar encaminhamento                                                                | NUNCA             | NEGADO   | 0
+  24 | c     | PASSOU    | ver agendamento                                                                         | VAZIO             | 0        | 0
+  25 | c     | PASSOU    | ver anexo_encaminhamento                                                                | VAZIO             | 0        | 0
+  26 | c     | PASSOU    | ver clinica                                                                             | VAZIO             | 0        | 0
+  27 | c     | PASSOU    | ver clinica_especialidade                                                               | VAZIO             | 0        | 0
+  28 | c     | PASSOU    | ver consentimento                                                                       | VAZIO             | 0        | 0
+  29 | c     | PASSOU    | ver contrarreferencia                                                                   | VAZIO             | 0        | 0
+  30 | c     | PASSOU    | ver encaminhamento                                                                      | VAZIO             | 0        | 0
+  31 | c     | PASSOU    | ver evento_auditoria                                                                    | VAZIO             | 0        | 0
+  32 | c     | PASSOU    | ver flag_clinica                                                                        | VAZIO             | 0        | 0
+  33 | c     | PASSOU    | ver historico_status_encaminhamento                                                     | VAZIO             | 0        | 0
+  34 | c     | PASSOU    | ver horario_atendimento                                                                 | VAZIO             | 0        | 0
+  35 | c     | PASSOU    | ver link_paciente                                                                       | VAZIO             | 0        | 0
+  36 | c     | PASSOU    | ver paciente                                                                            | VAZIO             | 0        | 0
+  37 | c     | PASSOU    | ver paciente_clinica                                                                    | VAZIO             | 0        | 0
+  38 | c     | PASSOU    | ver profissional                                                                        | VAZIO             | 0        | 0
+  39 | c     | PASSOU    | ver profissional_clinica                                                                | VAZIO             | 0        | 0
+  40 | c     | PASSOU    | ver profissional_especialidade                                                          | VAZIO             | 0        | 0
+  41 | c     | PASSOU    | ver usuario                                                                             | VAZIO             | 0        | 0
+  42 | c     | PASSOU    | ver usuario_clinica                                                                     | VAZIO             | 0        | 0
+  43 | c     | PASSOU    | ver vaga_encaminhamento                                                                 | VAZIO             | 0        | 0
+  44 | c     | PASSOU    | inserir agendamento                                                                     | VAZIO             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+  45 | c     | PASSOU    | atualizar agendamento                                                                   | VAZIO             | NEGADO   | 0
+  46 | c     | PASSOU    | atualizar encaminhamento                                                                | VAZIO             | NEGADO   | 0
+  47 | c     | PASSOU    | ver agendamento                                                                         | SO_CLINICA_A      | 0        | 0
+  48 | c     | PASSOU    | ver anexo_encaminhamento                                                                | SO_CLINICA_A      | 0        | 0
+  49 | c     | PASSOU    | ver clinica                                                                             | SO_CLINICA_A      | 0        | 0
+  50 | c     | FALHOU    | ver clinica_especialidade                                                               | SO_CLINICA_A      | 0        | 1
+  51 | c     | PASSOU    | ver consentimento                                                                       | SO_CLINICA_A      | 0        | 0
+  52 | c     | PASSOU    | ver contrarreferencia                                                                   | SO_CLINICA_A      | 0        | 0
+  53 | c     | PASSOU    | ver encaminhamento                                                                      | SO_CLINICA_A      | 0        | 0
+  54 | c     | PASSOU    | ver evento_auditoria                                                                    | SO_CLINICA_A      | 0        | 0
+  55 | c     | PASSOU    | ver flag_clinica                                                                        | SO_CLINICA_A      | 0        | 0
+  56 | c     | PASSOU    | ver historico_status_encaminhamento                                                     | SO_CLINICA_A      | 0        | 0
+  57 | c     | PASSOU    | ver horario_atendimento                                                                 | SO_CLINICA_A      | 0        | 0
+  58 | c     | PASSOU    | ver link_paciente                                                                       | SO_CLINICA_A      | 0        | 0
+  59 | c     | PASSOU    | ver paciente                                                                            | SO_CLINICA_A      | 0        | 0
+  60 | c     | PASSOU    | ver paciente_clinica                                                                    | SO_CLINICA_A      | 0        | 0
+  61 | c     | PASSOU    | ver profissional                                                                        | SO_CLINICA_A      | 0        | 0
+  62 | c     | PASSOU    | ver profissional_clinica                                                                | SO_CLINICA_A      | 0        | 0
+  63 | c     | PASSOU    | ver profissional_especialidade                                                          | SO_CLINICA_A      | 0        | 0
+  64 | c     | PASSOU    | ver usuario                                                                             | SO_CLINICA_A      | 0        | 0
+  65 | c     | PASSOU    | ver usuario_clinica                                                                     | SO_CLINICA_A      | 0        | 0
+  66 | c     | PASSOU    | ver vaga_encaminhamento                                                                 | SO_CLINICA_A      | 0        | 0
+  67 | c     | PASSOU    | inserir agendamento                                                                     | SO_CLINICA_A      | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+  68 | c     | PASSOU    | atualizar agendamento                                                                   | SO_CLINICA_A      | NEGADO   | 0
+  69 | c     | PASSOU    | atualizar encaminhamento                                                                | SO_CLINICA_A      | NEGADO   | 0
+  70 | c     | PASSOU    | ver agendamento                                                                         | SO_PAPEL_ADMIN    | 0        | 0
+  71 | c     | PASSOU    | ver anexo_encaminhamento                                                                | SO_PAPEL_ADMIN    | 0        | 0
+  72 | c     | PASSOU    | ver clinica                                                                             | SO_PAPEL_ADMIN    | 0        | 0
+  73 | c     | PASSOU    | ver clinica_especialidade                                                               | SO_PAPEL_ADMIN    | 0        | 0
+  74 | c     | PASSOU    | ver consentimento                                                                       | SO_PAPEL_ADMIN    | 0        | 0
+  75 | c     | PASSOU    | ver contrarreferencia                                                                   | SO_PAPEL_ADMIN    | 0        | 0
+  76 | c     | PASSOU    | ver encaminhamento                                                                      | SO_PAPEL_ADMIN    | 0        | 0
+  77 | c     | PASSOU    | ver evento_auditoria                                                                    | SO_PAPEL_ADMIN    | 0        | 0
+  78 | c     | PASSOU    | ver flag_clinica                                                                        | SO_PAPEL_ADMIN    | 0        | 0
+  79 | c     | PASSOU    | ver historico_status_encaminhamento                                                     | SO_PAPEL_ADMIN    | 0        | 0
+  80 | c     | PASSOU    | ver horario_atendimento                                                                 | SO_PAPEL_ADMIN    | 0        | 0
+  81 | c     | PASSOU    | ver link_paciente                                                                       | SO_PAPEL_ADMIN    | 0        | 0
+  82 | c     | PASSOU    | ver paciente                                                                            | SO_PAPEL_ADMIN    | 0        | 0
+  83 | c     | PASSOU    | ver paciente_clinica                                                                    | SO_PAPEL_ADMIN    | 0        | 0
+  84 | c     | INFO      | ver profissional (global/proprio por desenho)                                           | SO_PAPEL_ADMIN    | INFO     | 4
+  85 | c     | PASSOU    | ver profissional_clinica                                                                | SO_PAPEL_ADMIN    | 0        | 0
+  86 | c     | INFO      | ver profissional_especialidade (global/proprio por desenho)                             | SO_PAPEL_ADMIN    | INFO     | 2
+  87 | c     | PASSOU    | ver usuario                                                                             | SO_PAPEL_ADMIN    | 0        | 0
+  88 | c     | PASSOU    | ver usuario_clinica                                                                     | SO_PAPEL_ADMIN    | 0        | 0
+  89 | c     | PASSOU    | ver vaga_encaminhamento                                                                 | SO_PAPEL_ADMIN    | 0        | 0
+  90 | c     | PASSOU    | inserir agendamento                                                                     | SO_PAPEL_ADMIN    | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+  91 | c     | PASSOU    | atualizar agendamento                                                                   | SO_PAPEL_ADMIN    | NEGADO   | 0
+  92 | c     | PASSOU    | atualizar encaminhamento                                                                | SO_PAPEL_ADMIN    | NEGADO   | 0
+  93 | c     | PASSOU    | ver agendamento                                                                         | USU_SEM_CLINICA   | 0        | 0
+  94 | c     | PASSOU    | ver anexo_encaminhamento                                                                | USU_SEM_CLINICA   | 0        | 0
+  95 | c     | PASSOU    | ver clinica                                                                             | USU_SEM_CLINICA   | 0        | 0
+  96 | c     | PASSOU    | ver clinica_especialidade                                                               | USU_SEM_CLINICA   | 0        | 0
+  97 | c     | PASSOU    | ver consentimento                                                                       | USU_SEM_CLINICA   | 0        | 0
+  98 | c     | PASSOU    | ver contrarreferencia                                                                   | USU_SEM_CLINICA   | 0        | 0
+  99 | c     | PASSOU    | ver encaminhamento                                                                      | USU_SEM_CLINICA   | 0        | 0
+ 100 | c     | PASSOU    | ver evento_auditoria                                                                    | USU_SEM_CLINICA   | 0        | 0
+ 101 | c     | PASSOU    | ver flag_clinica                                                                        | USU_SEM_CLINICA   | 0        | 0
+ 102 | c     | PASSOU    | ver historico_status_encaminhamento                                                     | USU_SEM_CLINICA   | 0        | 0
+ 103 | c     | PASSOU    | ver horario_atendimento                                                                 | USU_SEM_CLINICA   | 0        | 0
+ 104 | c     | PASSOU    | ver link_paciente                                                                       | USU_SEM_CLINICA   | 0        | 0
+ 105 | c     | PASSOU    | ver paciente                                                                            | USU_SEM_CLINICA   | 0        | 0
+ 106 | c     | PASSOU    | ver paciente_clinica                                                                    | USU_SEM_CLINICA   | 0        | 0
+ 107 | c     | INFO      | ver profissional (global/proprio por desenho)                                           | USU_SEM_CLINICA   | INFO     | 4
+ 108 | c     | PASSOU    | ver profissional_clinica                                                                | USU_SEM_CLINICA   | 0        | 0
+ 109 | c     | INFO      | ver profissional_especialidade (global/proprio por desenho)                             | USU_SEM_CLINICA   | INFO     | 2
+ 110 | c     | INFO      | ver usuario (global/proprio por desenho)                                                | USU_SEM_CLINICA   | INFO     | 1
+ 111 | c     | INFO      | ver usuario_clinica (global/proprio por desenho)                                        | USU_SEM_CLINICA   | INFO     | 1
+ 112 | c     | PASSOU    | ver vaga_encaminhamento                                                                 | USU_SEM_CLINICA   | 0        | 0
+ 113 | c     | PASSOU    | inserir agendamento                                                                     | USU_SEM_CLINICA   | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 114 | c     | PASSOU    | atualizar agendamento                                                                   | USU_SEM_CLINICA   | NEGADO   | 0
+ 115 | c     | PASSOU    | atualizar encaminhamento                                                                | USU_SEM_CLINICA   | NEGADO   | 0
+ 116 | c     | PASSOU    | ver agendamento                                                                         | CLIN_INEXISTENTE  | 0        | 0
+ 117 | c     | PASSOU    | ver anexo_encaminhamento                                                                | CLIN_INEXISTENTE  | 0        | 0
+ 118 | c     | PASSOU    | ver clinica                                                                             | CLIN_INEXISTENTE  | 0        | 0
+ 119 | c     | PASSOU    | ver clinica_especialidade                                                               | CLIN_INEXISTENTE  | 0        | 0
+ 120 | c     | PASSOU    | ver consentimento                                                                       | CLIN_INEXISTENTE  | 0        | 0
+ 121 | c     | PASSOU    | ver contrarreferencia                                                                   | CLIN_INEXISTENTE  | 0        | 0
+ 122 | c     | PASSOU    | ver encaminhamento                                                                      | CLIN_INEXISTENTE  | 0        | 0
+ 123 | c     | PASSOU    | ver evento_auditoria                                                                    | CLIN_INEXISTENTE  | 0        | 0
+ 124 | c     | PASSOU    | ver flag_clinica                                                                        | CLIN_INEXISTENTE  | 0        | 0
+ 125 | c     | PASSOU    | ver historico_status_encaminhamento                                                     | CLIN_INEXISTENTE  | 0        | 0
+ 126 | c     | PASSOU    | ver horario_atendimento                                                                 | CLIN_INEXISTENTE  | 0        | 0
+ 127 | c     | PASSOU    | ver link_paciente                                                                       | CLIN_INEXISTENTE  | 0        | 0
+ 128 | c     | PASSOU    | ver paciente                                                                            | CLIN_INEXISTENTE  | 0        | 0
+ 129 | c     | PASSOU    | ver paciente_clinica                                                                    | CLIN_INEXISTENTE  | 0        | 0
+ 130 | c     | INFO      | ver profissional (global/proprio por desenho)                                           | CLIN_INEXISTENTE  | INFO     | 4
+ 131 | c     | PASSOU    | ver profissional_clinica                                                                | CLIN_INEXISTENTE  | 0        | 0
+ 132 | c     | INFO      | ver profissional_especialidade (global/proprio por desenho)                             | CLIN_INEXISTENTE  | INFO     | 2
+ 133 | c     | INFO      | ver usuario (global/proprio por desenho)                                                | CLIN_INEXISTENTE  | INFO     | 1
+ 134 | c     | INFO      | ver usuario_clinica (global/proprio por desenho)                                        | CLIN_INEXISTENTE  | INFO     | 1
+ 135 | c     | PASSOU    | ver vaga_encaminhamento                                                                 | CLIN_INEXISTENTE  | 0        | 0
+ 136 | c     | PASSOU    | inserir agendamento                                                                     | CLIN_INEXISTENTE  | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 137 | c     | PASSOU    | atualizar agendamento                                                                   | CLIN_INEXISTENTE  | NEGADO   | 0
+ 138 | c     | PASSOU    | atualizar encaminhamento                                                                | CLIN_INEXISTENTE  | NEGADO   | 0
+ 139 | c     | PASSOU    | GUC clinica_id=abc em agendamento                                                       | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 140 | c     | PASSOU    | GUC clinica_id=abc em anexo_encaminhamento                                              | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 141 | c     | PASSOU    | GUC clinica_id=abc em clinica                                                           | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 142 | c     | PASSOU    | GUC clinica_id=abc em clinica_especialidade                                             | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 143 | c     | PASSOU    | GUC clinica_id=abc em consentimento                                                     | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 144 | c     | PASSOU    | GUC clinica_id=abc em contrarreferencia                                                 | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 145 | c     | PASSOU    | GUC clinica_id=abc em encaminhamento                                                    | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 146 | c     | PASSOU    | GUC clinica_id=abc em evento_auditoria                                                  | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 147 | c     | PASSOU    | GUC clinica_id=abc em flag_clinica                                                      | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 148 | c     | PASSOU    | GUC clinica_id=abc em historico_status_encaminhamento                                   | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 149 | c     | PASSOU    | GUC clinica_id=abc em horario_atendimento                                               | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 150 | c     | PASSOU    | GUC clinica_id=abc em link_paciente                                                     | GUC_LIXO          | NEGADO   | 0
+ 151 | c     | PASSOU    | GUC clinica_id=abc em paciente                                                          | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 152 | c     | PASSOU    | GUC clinica_id=abc em paciente_clinica                                                  | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 153 | c     | INFO      | GUC clinica_id=abc em profissional (global por desenho)                                 | GUC_LIXO          | INFO     | 4
+ 154 | c     | PASSOU    | GUC clinica_id=abc em profissional_clinica                                              | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 155 | c     | INFO      | GUC clinica_id=abc em profissional_especialidade (global por desenho)                   | GUC_LIXO          | INFO     | 2
+ 156 | c     | PASSOU    | GUC clinica_id=abc em usuario                                                           | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 157 | c     | PASSOU    | GUC clinica_id=abc em usuario_clinica                                                   | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 158 | c     | PASSOU    | GUC clinica_id=abc em vaga_encaminhamento                                               | GUC_LIXO          | NEGADO   | ERRO[22P02]: invalid input syntax for type uuid: "a.
+     |       |           |                                                                                         |                   |          |.bc"
+ 159 | c     | PASSOU    | especialidade sem RLS e visivel sem contexto (catalogo global)                          | VAZIO             | POSITIVO | 2
+ 160 | contr.| PASSOU    | ADM_A ve linhas de A em usuario                                                         | ADM_A             | POSITIVO | 4
+     |.ole   |           |                                                                                         |                   |          | 
+ 161 | contr.| PASSOU    | ADM_A ve linhas de A em clinica                                                         | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 162 | contr.| PASSOU    | ADM_A ve linhas de A em usuario_clinica                                                 | ADM_A             | POSITIVO | 4
+     |.ole   |           |                                                                                         |                   |          | 
+ 163 | contr.| PASSOU    | ADM_A ve linhas de A em flag_clinica                                                    | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 164 | contr.| PASSOU    | ADM_A ve linhas de A em profissional_clinica                                            | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 165 | contr.| PASSOU    | ADM_A ve linhas de A em horario_atendimento                                             | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 166 | contr.| PASSOU    | ADM_A ve linhas de A em paciente                                                        | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 167 | contr.| PASSOU    | ADM_A ve linhas de A em paciente_clinica                                                | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 168 | contr.| PASSOU    | ADM_A ve linhas de A em encaminhamento                                                  | ADM_A             | POSITIVO | 2
+     |.ole   |           |                                                                                         |                   |          | 
+ 169 | contr.| PASSOU    | ADM_A ve linhas de A em historico_status_encaminhamento                                 | ADM_A             | POSITIVO | 2
+     |.ole   |           |                                                                                         |                   |          | 
+ 170 | contr.| PASSOU    | ADM_A ve linhas de A em consentimento                                                   | ADM_A             | POSITIVO | 3
+     |.ole   |           |                                                                                         |                   |          | 
+ 171 | contr.| PASSOU    | ADM_A ve linhas de A em vaga_encaminhamento                                             | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 172 | contr.| PASSOU    | ADM_A ve linhas de A em agendamento                                                     | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 173 | contr.| PASSOU    | ADM_A ve linhas de A em contrarreferencia                                               | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 174 | contr.| PASSOU    | ADM_A ve linhas de A em anexo_encaminhamento                                            | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 175 | contr.| PASSOU    | ADM_A ve linhas de A em evento_auditoria                                                | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 176 | contr.| PASSOU    | ADM_A ve linhas de A em clinica_especialidade                                           | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 177 | contr.| PASSOU    | REC_A ve agendamento da propria clinica                                                 | REC_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 178 | contr.| PASSOU    | ADM_A insere agendamento na clinica A                                                   | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 179 | contr.| PASSOU    | ADM_A atualiza agendamento da clinica A                                                 | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 180 | contr.| PASSOU    | ADM_B ve a propria clinica B                                                            | ADM_B             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 181 | a     | PASSOU    | ler por id (B) em usuario                                                               | ADM_A             | 0        | 0
+ 182 | a     | PASSOU    | listar tudo e cruzar com B em usuario                                                   | ADM_A             | 0        | 0
+ 183 | a     | PASSOU    | atualizar (B) em usuario                                                                | ADM_A             | NEGADO   | 0
+ 184 | a     | PASSOU    | apagar (B) em usuario                                                                   | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table usuario
+ 185 | a     | PASSOU    | ler por id (B) em clinica                                                               | ADM_A             | 0        | 0
+ 186 | a     | PASSOU    | listar tudo e cruzar com B em clinica                                                   | ADM_A             | 0        | 0
+ 187 | a     | PASSOU    | atualizar (B) em clinica                                                                | ADM_A             | NEGADO   | 0
+ 188 | a     | PASSOU    | apagar (B) em clinica                                                                   | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table clinica
+ 189 | a     | PASSOU    | ler por id (B) em usuario_clinica                                                       | ADM_A             | 0        | 0
+ 190 | a     | PASSOU    | listar tudo e cruzar com B em usuario_clinica                                           | ADM_A             | 0        | 0
+ 191 | a     | PASSOU    | atualizar (B) em usuario_clinica                                                        | ADM_A             | NEGADO   | 0
+ 192 | a     | PASSOU    | apagar (B) em usuario_clinica                                                           | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table usuario_cl.
+     |       |           |                                                                                         |                   |          |.inica
+ 193 | a     | PASSOU    | ler por id (B) em flag_clinica                                                          | ADM_A             | 0        | 0
+ 194 | a     | PASSOU    | listar tudo e cruzar com B em flag_clinica                                              | ADM_A             | 0        | 0
+ 195 | a     | PASSOU    | atualizar (B) em flag_clinica                                                           | ADM_A             | NEGADO   | 0
+ 196 | a     | PASSOU    | apagar (B) em flag_clinica                                                              | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table flag_clini.
+     |       |           |                                                                                         |                   |          |.ca
+ 197 | a     | PASSOU    | ler por id (B) em profissional_clinica                                                  | ADM_A             | 0        | 0
+ 198 | a     | PASSOU    | listar tudo e cruzar com B em profissional_clinica                                      | ADM_A             | 0        | 0
+ 199 | a     | PASSOU    | atualizar (B) em profissional_clinica                                                   | ADM_A             | NEGADO   | 0
+ 200 | a     | PASSOU    | apagar (B) em profissional_clinica                                                      | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table profission.
+     |       |           |                                                                                         |                   |          |.al_clinica
+ 201 | a     | PASSOU    | ler por id (B) em horario_atendimento                                                   | ADM_A             | 0        | 0
+ 202 | a     | PASSOU    | listar tudo e cruzar com B em horario_atendimento                                       | ADM_A             | 0        | 0
+ 203 | a     | PASSOU    | atualizar (B) em horario_atendimento                                                    | ADM_A             | NEGADO   | 0
+ 204 | a     | PASSOU    | apagar (B) em horario_atendimento                                                       | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table horario_at.
+     |       |           |                                                                                         |                   |          |.endimento
+ 205 | a     | PASSOU    | ler por id (B) em paciente                                                              | ADM_A             | 0        | 0
+ 206 | a     | PASSOU    | listar tudo e cruzar com B em paciente                                                  | ADM_A             | 0        | 0
+ 207 | a     | PASSOU    | atualizar (B) em paciente                                                               | ADM_A             | NEGADO   | 0
+ 208 | a     | PASSOU    | apagar (B) em paciente                                                                  | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table paciente
+ 209 | a     | PASSOU    | ler por id (B) em paciente_clinica                                                      | ADM_A             | 0        | 0
+ 210 | a     | PASSOU    | listar tudo e cruzar com B em paciente_clinica                                          | ADM_A             | 0        | 0
+ 211 | a     | PASSOU    | atualizar (B) em paciente_clinica                                                       | ADM_A             | NEGADO   | 0
+ 212 | a     | PASSOU    | apagar (B) em paciente_clinica                                                          | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table paciente_c.
+     |       |           |                                                                                         |                   |          |.linica
+ 213 | a     | PASSOU    | ler por id (B) em encaminhamento                                                        | ADM_A             | 0        | 0
+ 214 | a     | PASSOU    | listar tudo e cruzar com B em encaminhamento                                            | ADM_A             | 0        | 0
+ 215 | a     | PASSOU    | atualizar (B) em encaminhamento                                                         | ADM_A             | NEGADO   | 0
+ 216 | a     | PASSOU    | apagar (B) em encaminhamento                                                            | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table encaminham.
+     |       |           |                                                                                         |                   |          |.ento
+ 217 | a     | PASSOU    | ler por id (B) em historico_status_encaminhamento                                       | ADM_A             | 0        | 0
+ 218 | a     | PASSOU    | listar tudo e cruzar com B em historico_status_encaminhamento                           | ADM_A             | 0        | 0
+ 219 | a     | PASSOU    | atualizar (B) em historico_status_encaminhamento                                        | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 220 | a     | PASSOU    | apagar (B) em historico_status_encaminhamento                                           | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 221 | a     | PASSOU    | ler por id (B) em consentimento                                                         | ADM_A             | 0        | 0
+ 222 | a     | PASSOU    | listar tudo e cruzar com B em consentimento                                             | ADM_A             | 0        | 0
+ 223 | a     | PASSOU    | atualizar (B) em consentimento                                                          | ADM_A             | NEGADO   | 0
+ 224 | a     | PASSOU    | apagar (B) em consentimento                                                             | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table consentime.
+     |       |           |                                                                                         |                   |          |.nto
+ 225 | a     | PASSOU    | ler por id (B) em link_paciente                                                         | ADM_A             | 0        | 0
+ 226 | a     | PASSOU    | listar tudo e cruzar com B em link_paciente                                             | ADM_A             | 0        | 0
+ 227 | a     | PASSOU    | atualizar (B) em link_paciente                                                          | ADM_A             | NEGADO   | 0
+ 228 | a     | PASSOU    | apagar (B) em link_paciente                                                             | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table link_pacie.
+     |       |           |                                                                                         |                   |          |.nte
+ 229 | a     | PASSOU    | ler por id (B) em vaga_encaminhamento                                                   | ADM_A             | 0        | 0
+ 230 | a     | PASSOU    | listar tudo e cruzar com B em vaga_encaminhamento                                       | ADM_A             | 0        | 0
+ 231 | a     | PASSOU    | atualizar (B) em vaga_encaminhamento                                                    | ADM_A             | NEGADO   | 0
+ 232 | a     | PASSOU    | apagar (B) em vaga_encaminhamento                                                       | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table vaga_encam.
+     |       |           |                                                                                         |                   |          |.inhamento
+ 233 | a     | PASSOU    | ler por id (B) em agendamento                                                           | ADM_A             | 0        | 0
+ 234 | a     | PASSOU    | listar tudo e cruzar com B em agendamento                                               | ADM_A             | 0        | 0
+ 235 | a     | PASSOU    | atualizar (B) em agendamento                                                            | ADM_A             | NEGADO   | 0
+ 236 | a     | PASSOU    | apagar (B) em agendamento                                                               | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table agendament.
+     |       |           |                                                                                         |                   |          |.o
+ 237 | a     | PASSOU    | ler por id (B) em contrarreferencia                                                     | ADM_A             | 0        | 0
+ 238 | a     | PASSOU    | listar tudo e cruzar com B em contrarreferencia                                         | ADM_A             | 0        | 0
+ 239 | a     | PASSOU    | atualizar (B) em contrarreferencia                                                      | ADM_A             | NEGADO   | 0
+ 240 | a     | PASSOU    | apagar (B) em contrarreferencia                                                         | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table contrarref.
+     |       |           |                                                                                         |                   |          |.erencia
+ 241 | a     | PASSOU    | ler por id (B) em anexo_encaminhamento                                                  | ADM_A             | 0        | 0
+ 242 | a     | PASSOU    | listar tudo e cruzar com B em anexo_encaminhamento                                      | ADM_A             | 0        | 0
+ 243 | a     | PASSOU    | atualizar (B) em anexo_encaminhamento                                                   | ADM_A             | NEGADO   | 0
+ 244 | a     | PASSOU    | apagar (B) em anexo_encaminhamento                                                      | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table anexo_enca.
+     |       |           |                                                                                         |                   |          |.minhamento
+ 245 | a     | PASSOU    | ler por id (B) em evento_auditoria                                                      | ADM_A             | 0        | 0
+ 246 | a     | PASSOU    | listar tudo e cruzar com B em evento_auditoria                                          | ADM_A             | 0        | 0
+ 247 | a     | PASSOU    | atualizar (B) em evento_auditoria                                                       | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 248 | a     | PASSOU    | apagar (B) em evento_auditoria                                                          | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 249 | a     | PASSOU    | ler clinica_especialidade de B                                                          | ADM_A             | 0        | 0
+ 250 | a     | PASSOU    | atualizar clinica_especialidade de B                                                    | ADM_A             | NEGADO   | 0
+ 251 | a     | PASSOU    | apagar clinica_especialidade de B                                                       | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table clinica_es.
+     |       |           |                                                                                         |                   |          |.pecialidade
+ 252 | a     | PASSOU    | ler por id (B) em usuario                                                               | REC_A             | 0        | 0
+ 253 | a     | PASSOU    | listar tudo e cruzar com B em usuario                                                   | REC_A             | 0        | 0
+ 254 | a     | PASSOU    | atualizar (B) em usuario                                                                | REC_A             | NEGADO   | 0
+ 255 | a     | PASSOU    | apagar (B) em usuario                                                                   | REC_A             | NEGADO   | ERRO[42501]: permission denied for table usuario
+ 256 | a     | PASSOU    | ler por id (B) em clinica                                                               | REC_A             | 0        | 0
+ 257 | a     | PASSOU    | listar tudo e cruzar com B em clinica                                                   | REC_A             | 0        | 0
+ 258 | a     | PASSOU    | atualizar (B) em clinica                                                                | REC_A             | NEGADO   | 0
+ 259 | a     | PASSOU    | apagar (B) em clinica                                                                   | REC_A             | NEGADO   | ERRO[42501]: permission denied for table clinica
+ 260 | a     | PASSOU    | ler por id (B) em usuario_clinica                                                       | REC_A             | 0        | 0
+ 261 | a     | PASSOU    | listar tudo e cruzar com B em usuario_clinica                                           | REC_A             | 0        | 0
+ 262 | a     | PASSOU    | atualizar (B) em usuario_clinica                                                        | REC_A             | NEGADO   | 0
+ 263 | a     | PASSOU    | apagar (B) em usuario_clinica                                                           | REC_A             | NEGADO   | ERRO[42501]: permission denied for table usuario_cl.
+     |       |           |                                                                                         |                   |          |.inica
+ 264 | a     | PASSOU    | ler por id (B) em flag_clinica                                                          | REC_A             | 0        | 0
+ 265 | a     | PASSOU    | listar tudo e cruzar com B em flag_clinica                                              | REC_A             | 0        | 0
+ 266 | a     | PASSOU    | atualizar (B) em flag_clinica                                                           | REC_A             | NEGADO   | 0
+ 267 | a     | PASSOU    | apagar (B) em flag_clinica                                                              | REC_A             | NEGADO   | ERRO[42501]: permission denied for table flag_clini.
+     |       |           |                                                                                         |                   |          |.ca
+ 268 | a     | PASSOU    | ler por id (B) em profissional_clinica                                                  | REC_A             | 0        | 0
+ 269 | a     | PASSOU    | listar tudo e cruzar com B em profissional_clinica                                      | REC_A             | 0        | 0
+ 270 | a     | PASSOU    | atualizar (B) em profissional_clinica                                                   | REC_A             | NEGADO   | 0
+ 271 | a     | PASSOU    | apagar (B) em profissional_clinica                                                      | REC_A             | NEGADO   | ERRO[42501]: permission denied for table profission.
+     |       |           |                                                                                         |                   |          |.al_clinica
+ 272 | a     | PASSOU    | ler por id (B) em horario_atendimento                                                   | REC_A             | 0        | 0
+ 273 | a     | PASSOU    | listar tudo e cruzar com B em horario_atendimento                                       | REC_A             | 0        | 0
+ 274 | a     | PASSOU    | atualizar (B) em horario_atendimento                                                    | REC_A             | NEGADO   | 0
+ 275 | a     | PASSOU    | apagar (B) em horario_atendimento                                                       | REC_A             | NEGADO   | ERRO[42501]: permission denied for table horario_at.
+     |       |           |                                                                                         |                   |          |.endimento
+ 276 | a     | PASSOU    | ler por id (B) em paciente                                                              | REC_A             | 0        | 0
+ 277 | a     | PASSOU    | listar tudo e cruzar com B em paciente                                                  | REC_A             | 0        | 0
+ 278 | a     | PASSOU    | atualizar (B) em paciente                                                               | REC_A             | NEGADO   | 0
+ 279 | a     | PASSOU    | apagar (B) em paciente                                                                  | REC_A             | NEGADO   | ERRO[42501]: permission denied for table paciente
+ 280 | a     | PASSOU    | ler por id (B) em paciente_clinica                                                      | REC_A             | 0        | 0
+ 281 | a     | PASSOU    | listar tudo e cruzar com B em paciente_clinica                                          | REC_A             | 0        | 0
+ 282 | a     | PASSOU    | atualizar (B) em paciente_clinica                                                       | REC_A             | NEGADO   | 0
+ 283 | a     | PASSOU    | apagar (B) em paciente_clinica                                                          | REC_A             | NEGADO   | ERRO[42501]: permission denied for table paciente_c.
+     |       |           |                                                                                         |                   |          |.linica
+ 284 | a     | PASSOU    | ler por id (B) em encaminhamento                                                        | REC_A             | 0        | 0
+ 285 | a     | PASSOU    | listar tudo e cruzar com B em encaminhamento                                            | REC_A             | 0        | 0
+ 286 | a     | PASSOU    | atualizar (B) em encaminhamento                                                         | REC_A             | NEGADO   | 0
+ 287 | a     | PASSOU    | apagar (B) em encaminhamento                                                            | REC_A             | NEGADO   | ERRO[42501]: permission denied for table encaminham.
+     |       |           |                                                                                         |                   |          |.ento
+ 288 | a     | PASSOU    | ler por id (B) em historico_status_encaminhamento                                       | REC_A             | 0        | 0
+ 289 | a     | PASSOU    | listar tudo e cruzar com B em historico_status_encaminhamento                           | REC_A             | 0        | 0
+ 290 | a     | PASSOU    | atualizar (B) em historico_status_encaminhamento                                        | REC_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 291 | a     | PASSOU    | apagar (B) em historico_status_encaminhamento                                           | REC_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 292 | a     | PASSOU    | ler por id (B) em consentimento                                                         | REC_A             | 0        | 0
+ 293 | a     | PASSOU    | listar tudo e cruzar com B em consentimento                                             | REC_A             | 0        | 0
+ 294 | a     | PASSOU    | atualizar (B) em consentimento                                                          | REC_A             | NEGADO   | 0
+ 295 | a     | PASSOU    | apagar (B) em consentimento                                                             | REC_A             | NEGADO   | ERRO[42501]: permission denied for table consentime.
+     |       |           |                                                                                         |                   |          |.nto
+ 296 | a     | PASSOU    | ler por id (B) em link_paciente                                                         | REC_A             | 0        | 0
+ 297 | a     | PASSOU    | listar tudo e cruzar com B em link_paciente                                             | REC_A             | 0        | 0
+ 298 | a     | PASSOU    | atualizar (B) em link_paciente                                                          | REC_A             | NEGADO   | 0
+ 299 | a     | PASSOU    | apagar (B) em link_paciente                                                             | REC_A             | NEGADO   | ERRO[42501]: permission denied for table link_pacie.
+     |       |           |                                                                                         |                   |          |.nte
+ 300 | a     | PASSOU    | ler por id (B) em vaga_encaminhamento                                                   | REC_A             | 0        | 0
+ 301 | a     | PASSOU    | listar tudo e cruzar com B em vaga_encaminhamento                                       | REC_A             | 0        | 0
+ 302 | a     | PASSOU    | atualizar (B) em vaga_encaminhamento                                                    | REC_A             | NEGADO   | 0
+ 303 | a     | PASSOU    | apagar (B) em vaga_encaminhamento                                                       | REC_A             | NEGADO   | ERRO[42501]: permission denied for table vaga_encam.
+     |       |           |                                                                                         |                   |          |.inhamento
+ 304 | a     | PASSOU    | ler por id (B) em agendamento                                                           | REC_A             | 0        | 0
+ 305 | a     | PASSOU    | listar tudo e cruzar com B em agendamento                                               | REC_A             | 0        | 0
+ 306 | a     | PASSOU    | atualizar (B) em agendamento                                                            | REC_A             | NEGADO   | 0
+ 307 | a     | PASSOU    | apagar (B) em agendamento                                                               | REC_A             | NEGADO   | ERRO[42501]: permission denied for table agendament.
+     |       |           |                                                                                         |                   |          |.o
+ 308 | a     | PASSOU    | ler por id (B) em contrarreferencia                                                     | REC_A             | 0        | 0
+ 309 | a     | PASSOU    | listar tudo e cruzar com B em contrarreferencia                                         | REC_A             | 0        | 0
+ 310 | a     | PASSOU    | atualizar (B) em contrarreferencia                                                      | REC_A             | NEGADO   | 0
+ 311 | a     | PASSOU    | apagar (B) em contrarreferencia                                                         | REC_A             | NEGADO   | ERRO[42501]: permission denied for table contrarref.
+     |       |           |                                                                                         |                   |          |.erencia
+ 312 | a     | PASSOU    | ler por id (B) em anexo_encaminhamento                                                  | REC_A             | 0        | 0
+ 313 | a     | PASSOU    | listar tudo e cruzar com B em anexo_encaminhamento                                      | REC_A             | 0        | 0
+ 314 | a     | PASSOU    | atualizar (B) em anexo_encaminhamento                                                   | REC_A             | NEGADO   | 0
+ 315 | a     | PASSOU    | apagar (B) em anexo_encaminhamento                                                      | REC_A             | NEGADO   | ERRO[42501]: permission denied for table anexo_enca.
+     |       |           |                                                                                         |                   |          |.minhamento
+ 316 | a     | PASSOU    | ler por id (B) em evento_auditoria                                                      | REC_A             | 0        | 0
+ 317 | a     | PASSOU    | listar tudo e cruzar com B em evento_auditoria                                          | REC_A             | 0        | 0
+ 318 | a     | PASSOU    | atualizar (B) em evento_auditoria                                                       | REC_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 319 | a     | PASSOU    | apagar (B) em evento_auditoria                                                          | REC_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 320 | a     | PASSOU    | ler clinica_especialidade de B                                                          | REC_A             | 0        | 0
+ 321 | a     | PASSOU    | atualizar clinica_especialidade de B                                                    | REC_A             | NEGADO   | 0
+ 322 | a     | PASSOU    | apagar clinica_especialidade de B                                                       | REC_A             | NEGADO   | ERRO[42501]: permission denied for table clinica_es.
+     |       |           |                                                                                         |                   |          |.pecialidade
+ 323 | a     | PASSOU    | ler por id (B) em usuario                                                               | MED_A             | 0        | 0
+ 324 | a     | PASSOU    | listar tudo e cruzar com B em usuario                                                   | MED_A             | 0        | 0
+ 325 | a     | PASSOU    | atualizar (B) em usuario                                                                | MED_A             | NEGADO   | 0
+ 326 | a     | PASSOU    | apagar (B) em usuario                                                                   | MED_A             | NEGADO   | ERRO[42501]: permission denied for table usuario
+ 327 | a     | PASSOU    | ler por id (B) em clinica                                                               | MED_A             | 0        | 0
+ 328 | a     | PASSOU    | listar tudo e cruzar com B em clinica                                                   | MED_A             | 0        | 0
+ 329 | a     | PASSOU    | atualizar (B) em clinica                                                                | MED_A             | NEGADO   | 0
+ 330 | a     | PASSOU    | apagar (B) em clinica                                                                   | MED_A             | NEGADO   | ERRO[42501]: permission denied for table clinica
+ 331 | a     | PASSOU    | ler por id (B) em usuario_clinica                                                       | MED_A             | 0        | 0
+ 332 | a     | PASSOU    | listar tudo e cruzar com B em usuario_clinica                                           | MED_A             | 0        | 0
+ 333 | a     | PASSOU    | atualizar (B) em usuario_clinica                                                        | MED_A             | NEGADO   | 0
+ 334 | a     | PASSOU    | apagar (B) em usuario_clinica                                                           | MED_A             | NEGADO   | ERRO[42501]: permission denied for table usuario_cl.
+     |       |           |                                                                                         |                   |          |.inica
+ 335 | a     | PASSOU    | ler por id (B) em flag_clinica                                                          | MED_A             | 0        | 0
+ 336 | a     | PASSOU    | listar tudo e cruzar com B em flag_clinica                                              | MED_A             | 0        | 0
+ 337 | a     | PASSOU    | atualizar (B) em flag_clinica                                                           | MED_A             | NEGADO   | 0
+ 338 | a     | PASSOU    | apagar (B) em flag_clinica                                                              | MED_A             | NEGADO   | ERRO[42501]: permission denied for table flag_clini.
+     |       |           |                                                                                         |                   |          |.ca
+ 339 | a     | PASSOU    | ler por id (B) em profissional_clinica                                                  | MED_A             | 0        | 0
+ 340 | a     | PASSOU    | listar tudo e cruzar com B em profissional_clinica                                      | MED_A             | 0        | 0
+ 341 | a     | PASSOU    | atualizar (B) em profissional_clinica                                                   | MED_A             | NEGADO   | 0
+ 342 | a     | PASSOU    | apagar (B) em profissional_clinica                                                      | MED_A             | NEGADO   | ERRO[42501]: permission denied for table profission.
+     |       |           |                                                                                         |                   |          |.al_clinica
+ 343 | a     | PASSOU    | ler por id (B) em horario_atendimento                                                   | MED_A             | 0        | 0
+ 344 | a     | PASSOU    | listar tudo e cruzar com B em horario_atendimento                                       | MED_A             | 0        | 0
+ 345 | a     | PASSOU    | atualizar (B) em horario_atendimento                                                    | MED_A             | NEGADO   | 0
+ 346 | a     | PASSOU    | apagar (B) em horario_atendimento                                                       | MED_A             | NEGADO   | ERRO[42501]: permission denied for table horario_at.
+     |       |           |                                                                                         |                   |          |.endimento
+ 347 | a     | PASSOU    | ler por id (B) em paciente                                                              | MED_A             | 0        | 0
+ 348 | a     | PASSOU    | listar tudo e cruzar com B em paciente                                                  | MED_A             | 0        | 0
+ 349 | a     | PASSOU    | atualizar (B) em paciente                                                               | MED_A             | NEGADO   | 0
+ 350 | a     | PASSOU    | apagar (B) em paciente                                                                  | MED_A             | NEGADO   | ERRO[42501]: permission denied for table paciente
+ 351 | a     | PASSOU    | ler por id (B) em paciente_clinica                                                      | MED_A             | 0        | 0
+ 352 | a     | PASSOU    | listar tudo e cruzar com B em paciente_clinica                                          | MED_A             | 0        | 0
+ 353 | a     | PASSOU    | atualizar (B) em paciente_clinica                                                       | MED_A             | NEGADO   | 0
+ 354 | a     | PASSOU    | apagar (B) em paciente_clinica                                                          | MED_A             | NEGADO   | ERRO[42501]: permission denied for table paciente_c.
+     |       |           |                                                                                         |                   |          |.linica
+ 355 | a     | PASSOU    | ler por id (B) em encaminhamento                                                        | MED_A             | 0        | 0
+ 356 | a     | PASSOU    | listar tudo e cruzar com B em encaminhamento                                            | MED_A             | 0        | 0
+ 357 | a     | PASSOU    | atualizar (B) em encaminhamento                                                         | MED_A             | NEGADO   | 0
+ 358 | a     | PASSOU    | apagar (B) em encaminhamento                                                            | MED_A             | NEGADO   | ERRO[42501]: permission denied for table encaminham.
+     |       |           |                                                                                         |                   |          |.ento
+ 359 | a     | PASSOU    | ler por id (B) em historico_status_encaminhamento                                       | MED_A             | 0        | 0
+ 360 | a     | PASSOU    | listar tudo e cruzar com B em historico_status_encaminhamento                           | MED_A             | 0        | 0
+ 361 | a     | PASSOU    | atualizar (B) em historico_status_encaminhamento                                        | MED_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 362 | a     | PASSOU    | apagar (B) em historico_status_encaminhamento                                           | MED_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 363 | a     | PASSOU    | ler por id (B) em consentimento                                                         | MED_A             | 0        | 0
+ 364 | a     | PASSOU    | listar tudo e cruzar com B em consentimento                                             | MED_A             | 0        | 0
+ 365 | a     | PASSOU    | atualizar (B) em consentimento                                                          | MED_A             | NEGADO   | 0
+ 366 | a     | PASSOU    | apagar (B) em consentimento                                                             | MED_A             | NEGADO   | ERRO[42501]: permission denied for table consentime.
+     |       |           |                                                                                         |                   |          |.nto
+ 367 | a     | PASSOU    | ler por id (B) em link_paciente                                                         | MED_A             | 0        | 0
+ 368 | a     | PASSOU    | listar tudo e cruzar com B em link_paciente                                             | MED_A             | 0        | 0
+ 369 | a     | PASSOU    | atualizar (B) em link_paciente                                                          | MED_A             | NEGADO   | 0
+ 370 | a     | PASSOU    | apagar (B) em link_paciente                                                             | MED_A             | NEGADO   | ERRO[42501]: permission denied for table link_pacie.
+     |       |           |                                                                                         |                   |          |.nte
+ 371 | a     | PASSOU    | ler por id (B) em vaga_encaminhamento                                                   | MED_A             | 0        | 0
+ 372 | a     | PASSOU    | listar tudo e cruzar com B em vaga_encaminhamento                                       | MED_A             | 0        | 0
+ 373 | a     | PASSOU    | atualizar (B) em vaga_encaminhamento                                                    | MED_A             | NEGADO   | 0
+ 374 | a     | PASSOU    | apagar (B) em vaga_encaminhamento                                                       | MED_A             | NEGADO   | ERRO[42501]: permission denied for table vaga_encam.
+     |       |           |                                                                                         |                   |          |.inhamento
+ 375 | a     | PASSOU    | ler por id (B) em agendamento                                                           | MED_A             | 0        | 0
+ 376 | a     | PASSOU    | listar tudo e cruzar com B em agendamento                                               | MED_A             | 0        | 0
+ 377 | a     | PASSOU    | atualizar (B) em agendamento                                                            | MED_A             | NEGADO   | 0
+ 378 | a     | PASSOU    | apagar (B) em agendamento                                                               | MED_A             | NEGADO   | ERRO[42501]: permission denied for table agendament.
+     |       |           |                                                                                         |                   |          |.o
+ 379 | a     | PASSOU    | ler por id (B) em contrarreferencia                                                     | MED_A             | 0        | 0
+ 380 | a     | PASSOU    | listar tudo e cruzar com B em contrarreferencia                                         | MED_A             | 0        | 0
+ 381 | a     | PASSOU    | atualizar (B) em contrarreferencia                                                      | MED_A             | NEGADO   | 0
+ 382 | a     | PASSOU    | apagar (B) em contrarreferencia                                                         | MED_A             | NEGADO   | ERRO[42501]: permission denied for table contrarref.
+     |       |           |                                                                                         |                   |          |.erencia
+ 383 | a     | PASSOU    | ler por id (B) em anexo_encaminhamento                                                  | MED_A             | 0        | 0
+ 384 | a     | PASSOU    | listar tudo e cruzar com B em anexo_encaminhamento                                      | MED_A             | 0        | 0
+ 385 | a     | PASSOU    | atualizar (B) em anexo_encaminhamento                                                   | MED_A             | NEGADO   | 0
+ 386 | a     | PASSOU    | apagar (B) em anexo_encaminhamento                                                      | MED_A             | NEGADO   | ERRO[42501]: permission denied for table anexo_enca.
+     |       |           |                                                                                         |                   |          |.minhamento
+ 387 | a     | PASSOU    | ler por id (B) em evento_auditoria                                                      | MED_A             | 0        | 0
+ 388 | a     | PASSOU    | listar tudo e cruzar com B em evento_auditoria                                          | MED_A             | 0        | 0
+ 389 | a     | PASSOU    | atualizar (B) em evento_auditoria                                                       | MED_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 390 | a     | PASSOU    | apagar (B) em evento_auditoria                                                          | MED_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 391 | a     | PASSOU    | ler clinica_especialidade de B                                                          | MED_A             | 0        | 0
+ 392 | a     | PASSOU    | atualizar clinica_especialidade de B                                                    | MED_A             | NEGADO   | 0
+ 393 | a     | PASSOU    | apagar clinica_especialidade de B                                                       | MED_A             | NEGADO   | ERRO[42501]: permission denied for table clinica_es.
+     |       |           |                                                                                         |                   |          |.pecialidade
+ 394 | a     | PASSOU    | inserir clinica_especialidade(B)                                                        | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "clinica_especialidade"
+ 395 | a     | PASSOU    | inserir usuario_clinica(B) (auto-promocao)                                              | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "usuario_clinica"
+ 396 | a     | PASSOU    | inserir flag_clinica(B)                                                                 | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "flag_clinica"
+ 397 | a     | PASSOU    | inserir profissional_clinica(B)                                                         | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "profissional_clinica"
+ 398 | a     | PASSOU    | inserir horario_atendimento(B)                                                          | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "horario_atendimento"
+ 399 | a     | PASSOU    | inserir paciente_clinica(B)                                                             | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "paciente_clinica"
+ 400 | a     | PASSOU    | inserir vaga_encaminhamento(B)                                                          | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "vaga_encaminhamento"
+ 401 | a     | PASSOU    | inserir agendamento(B)                                                                  | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 402 | a     | PASSOU    | inserir consentimento(B, RECEPCAO)                                                      | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "consentimento"
+ 403 | a     | PASSOU    | inserir contrarreferencia(B)                                                            | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "contrarreferencia"
+ 404 | a     | PASSOU    | inserir evento_auditoria(clinica B)                                                     | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "evento_auditoria"
+ 405 | a     | PASSOU    | inserir link_paciente para encaminhamento de B                                          | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "link_paciente"
+ 406 | a     | PASSOU    | inserir anexo em encaminhamento de B                                                    | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "anexo_encaminhamento"
+ 407 | a     | PASSOU    | inserir historico em encaminhamento de B                                                | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "historico_status_encaminhamento"
+ 408 | a     | PASSOU    | inserir clinica_especialidade(B)                                                        | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "clinica_especialidade"
+ 409 | a     | PASSOU    | inserir usuario_clinica(B) (auto-promocao)                                              | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "usuario_clinica"
+ 410 | a     | PASSOU    | inserir flag_clinica(B)                                                                 | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "flag_clinica"
+ 411 | a     | PASSOU    | inserir profissional_clinica(B)                                                         | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "profissional_clinica"
+ 412 | a     | PASSOU    | inserir horario_atendimento(B)                                                          | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "horario_atendimento"
+ 413 | a     | PASSOU    | inserir paciente_clinica(B)                                                             | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "paciente_clinica"
+ 414 | a     | PASSOU    | inserir vaga_encaminhamento(B)                                                          | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "vaga_encaminhamento"
+ 415 | a     | PASSOU    | inserir agendamento(B)                                                                  | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 416 | a     | PASSOU    | inserir consentimento(B, RECEPCAO)                                                      | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "consentimento"
+ 417 | a     | PASSOU    | inserir contrarreferencia(B)                                                            | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "contrarreferencia"
+ 418 | a     | PASSOU    | inserir evento_auditoria(clinica B)                                                     | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "evento_auditoria"
+ 419 | a     | PASSOU    | inserir link_paciente para encaminhamento de B                                          | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "link_paciente"
+ 420 | a     | PASSOU    | inserir anexo em encaminhamento de B                                                    | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "anexo_encaminhamento"
+ 421 | a     | PASSOU    | inserir historico em encaminhamento de B                                                | REC_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "historico_status_encaminhamento"
+ 422 | a     | PASSOU    | inserir clinica_especialidade(B)                                                        | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "clinica_especialidade"
+ 423 | a     | PASSOU    | inserir usuario_clinica(B) (auto-promocao)                                              | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "usuario_clinica"
+ 424 | a     | PASSOU    | inserir flag_clinica(B)                                                                 | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "flag_clinica"
+ 425 | a     | PASSOU    | inserir profissional_clinica(B)                                                         | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "profissional_clinica"
+ 426 | a     | PASSOU    | inserir horario_atendimento(B)                                                          | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "horario_atendimento"
+ 427 | a     | PASSOU    | inserir paciente_clinica(B)                                                             | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "paciente_clinica"
+ 428 | a     | PASSOU    | inserir vaga_encaminhamento(B)                                                          | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "vaga_encaminhamento"
+ 429 | a     | PASSOU    | inserir agendamento(B)                                                                  | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 430 | a     | PASSOU    | inserir consentimento(B, RECEPCAO)                                                      | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "consentimento"
+ 431 | a     | PASSOU    | inserir contrarreferencia(B)                                                            | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "contrarreferencia"
+ 432 | a     | PASSOU    | inserir evento_auditoria(clinica B)                                                     | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "evento_auditoria"
+ 433 | a     | PASSOU    | inserir link_paciente para encaminhamento de B                                          | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "link_paciente"
+ 434 | a     | PASSOU    | inserir anexo em encaminhamento de B                                                    | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "anexo_encaminhamento"
+ 435 | a     | PASSOU    | inserir historico em encaminhamento de B                                                | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "historico_status_encaminhamento"
+ 436 | contr.| PASSOU    | ADM_A insere paciente_clinica(A)                                                        | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 437 | contr.| PASSOU    | ADM_A insere evento_auditoria(clinica A)                                                | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 438 | contr.| PASSOU    | ADM_A insere clinica_especialidade(A)                                                   | ADM_A             | POSITIVO | 1
+     |.ole   |           |                                                                                         |                   |          | 
+ 439 | a     | PASSOU    | saas_app: SET ROLE saas_owner                                                           | NUNCA             | ERRO     | ERRO[42501]: permission denied to set role "saas_ow.
+     |       |           |                                                                                         |                   |          |.ner"
+ 440 | a     | PASSOU    | saas_app: DISABLE ROW LEVEL SECURITY                                                    | NUNCA             | ERRO     | ERRO[42501]: must be owner of table agendamento
+ 441 | a     | PASSOU    | saas_app: NO FORCE ROW LEVEL SECURITY                                                   | NUNCA             | ERRO     | ERRO[42501]: must be owner of table agendamento
+ 442 | a     | PASSOU    | saas_app: criar politica permissiva                                                     | NUNCA             | ERRO     | ERRO[42501]: must be owner of table agendamento
+ 443 | a     | PASSOU    | saas_app: session_replication_role=replica (pula gatilhos)                              | NUNCA             | ERRO     | ERRO[42501]: permission denied to set parameter "se.
+     |       |           |                                                                                         |                   |          |.ssion_replication_role"
+ 444 | a     | PASSOU    | saas_app: TRUNCATE agendamento                                                          | ADM_A             | ERRO     | ERRO[42501]: permission denied for table agendament.
+     |       |           |                                                                                         |                   |          |.o
+ 445 | b     | PASSOU    | E1 visivel                                                                              | ENC_E             | POSITIVO | 1
+ 446 | b     | PASSOU    | historico de E1 visivel                                                                 | ENC_E             | POSITIVO | 1
+ 447 | b     | PASSOU    | anexo de E1 visivel                                                                     | ENC_E             | POSITIVO | 1
+ 448 | b     | PASSOU    | contrarreferencia de E1 visivel                                                         | ENC_E             | POSITIVO | 1
+ 449 | b     | PASSOU    | motivo_cifrado de E1 legivel                                                            | ENC_E             | POSITIVO | 1
+ 450 | b     | INFO      | atualizar E1                                                                            | ENC_E             | INFO     | 1
+ 451 | b     | PASSOU    | E1 visivel                                                                              | ADM_A             | POSITIVO | 1
+ 452 | b     | PASSOU    | historico de E1 visivel                                                                 | ADM_A             | POSITIVO | 1
+ 453 | b     | PASSOU    | anexo de E1 visivel                                                                     | ADM_A             | POSITIVO | 1
+ 454 | b     | PASSOU    | contrarreferencia de E1 visivel                                                         | ADM_A             | POSITIVO | 1
+ 455 | b     | PASSOU    | motivo_cifrado de E1 legivel                                                            | ADM_A             | POSITIVO | 1
+ 456 | b     | INFO      | atualizar E1                                                                            | ADM_A             | INFO     | 1
+ 457 | b     | PASSOU    | E1 visivel                                                                              | REC_A             | POSITIVO | 1
+ 458 | b     | PASSOU    | historico de E1 visivel                                                                 | REC_A             | POSITIVO | 1
+ 459 | b     | PASSOU    | anexo de E1 visivel                                                                     | REC_A             | POSITIVO | 1
+ 460 | b     | PASSOU    | contrarreferencia de E1 visivel                                                         | REC_A             | POSITIVO | 1
+ 461 | b     | PASSOU    | motivo_cifrado de E1 legivel                                                            | REC_A             | POSITIVO | 1
+ 462 | b     | INFO      | atualizar E1                                                                            | REC_A             | INFO     | 1
+ 463 | b     | PASSOU    | E1 visivel                                                                              | MED_A             | POSITIVO | 1
+ 464 | b     | PASSOU    | historico de E1 visivel                                                                 | MED_A             | POSITIVO | 1
+ 465 | b     | PASSOU    | anexo de E1 visivel                                                                     | MED_A             | POSITIVO | 1
+ 466 | b     | PASSOU    | contrarreferencia de E1 visivel                                                         | MED_A             | POSITIVO | 1
+ 467 | b     | PASSOU    | motivo_cifrado de E1 legivel                                                            | MED_A             | POSITIVO | 1
+ 468 | b     | INFO      | atualizar E1                                                                            | MED_A             | INFO     | 1
+ 469 | b     | PASSOU    | E1 visivel                                                                              | PAC_A             | POSITIVO | 1
+ 470 | b     | PASSOU    | historico de E1 visivel                                                                 | PAC_A             | POSITIVO | 1
+ 471 | b     | PASSOU    | anexo de E1 visivel                                                                     | PAC_A             | POSITIVO | 1
+ 472 | b     | PASSOU    | contrarreferencia de E1 visivel                                                         | PAC_A             | POSITIVO | 1
+ 473 | b     | PASSOU    | motivo_cifrado de E1 legivel                                                            | PAC_A             | POSITIVO | 1
+ 474 | b     | INFO      | atualizar E1                                                                            | PAC_A             | INFO     | 1
+ 475 | b     | PASSOU    | E1 invisivel                                                                            | ADM_B             | 0        | 0
+ 476 | b     | PASSOU    | historico de E1 invisivel                                                               | ADM_B             | 0        | 0
+ 477 | b     | PASSOU    | anexo de E1 invisivel                                                                   | ADM_B             | 0        | 0
+ 478 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | ADM_B             | 0        | 0
+ 479 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | ADM_B             | 0        | 0
+ 480 | b     | PASSOU    | atualizar E1                                                                            | ADM_B             | NEGADO   | 0
+ 481 | b     | PASSOU    | E1 invisivel                                                                            | MED_B             | 0        | 0
+ 482 | b     | PASSOU    | historico de E1 invisivel                                                               | MED_B             | 0        | 0
+ 483 | b     | PASSOU    | anexo de E1 invisivel                                                                   | MED_B             | 0        | 0
+ 484 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | MED_B             | 0        | 0
+ 485 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | MED_B             | 0        | 0
+ 486 | b     | PASSOU    | atualizar E1                                                                            | MED_B             | NEGADO   | 0
+ 487 | b     | PASSOU    | E1 invisivel                                                                            | ENC_E2            | 0        | 0
+ 488 | b     | PASSOU    | historico de E1 invisivel                                                               | ENC_E2            | 0        | 0
+ 489 | b     | PASSOU    | anexo de E1 invisivel                                                                   | ENC_E2            | 0        | 0
+ 490 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | ENC_E2            | 0        | 0
+ 491 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | ENC_E2            | 0        | 0
+ 492 | b     | PASSOU    | atualizar E1                                                                            | ENC_E2            | NEGADO   | 0
+ 493 | b     | PASSOU    | E1 invisivel                                                                            | ENC_E2_CLIN_A     | 0        | 0
+ 494 | b     | PASSOU    | historico de E1 invisivel                                                               | ENC_E2_CLIN_A     | 0        | 0
+ 495 | b     | PASSOU    | anexo de E1 invisivel                                                                   | ENC_E2_CLIN_A     | 0        | 0
+ 496 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | ENC_E2_CLIN_A     | 0        | 0
+ 497 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | ENC_E2_CLIN_A     | 0        | 0
+ 498 | b     | PASSOU    | atualizar E1                                                                            | ENC_E2_CLIN_A     | NEGADO   | 0
+ 499 | b     | PASSOU    | E1 invisivel                                                                            | PAC_B             | 0        | 0
+ 500 | b     | PASSOU    | historico de E1 invisivel                                                               | PAC_B             | 0        | 0
+ 501 | b     | PASSOU    | anexo de E1 invisivel                                                                   | PAC_B             | 0        | 0
+ 502 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | PAC_B             | 0        | 0
+ 503 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | PAC_B             | 0        | 0
+ 504 | b     | PASSOU    | atualizar E1                                                                            | PAC_B             | NEGADO   | 0
+ 505 | b     | PASSOU    | E1 invisivel                                                                            | PAC_X             | 0        | 0
+ 506 | b     | PASSOU    | historico de E1 invisivel                                                               | PAC_X             | 0        | 0
+ 507 | b     | PASSOU    | anexo de E1 invisivel                                                                   | PAC_X             | 0        | 0
+ 508 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | PAC_X             | 0        | 0
+ 509 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | PAC_X             | 0        | 0
+ 510 | b     | PASSOU    | atualizar E1                                                                            | PAC_X             | NEGADO   | 0
+ 511 | b     | PASSOU    | E1 invisivel                                                                            | LINK_E1           | 0        | 0
+ 512 | b     | PASSOU    | historico de E1 invisivel                                                               | LINK_E1           | 0        | 0
+ 513 | b     | PASSOU    | anexo de E1 invisivel                                                                   | LINK_E1           | 0        | 0
+ 514 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | LINK_E1           | 0        | 0
+ 515 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | LINK_E1           | 0        | 0
+ 516 | b     | PASSOU    | atualizar E1                                                                            | LINK_E1           | NEGADO   | 0
+ 517 | b     | PASSOU    | E1 invisivel                                                                            | SISTEMA           | 0        | 0
+ 518 | b     | PASSOU    | historico de E1 invisivel                                                               | SISTEMA           | 0        | 0
+ 519 | b     | INFO      | anexo de E1 invisivel (SISTEMA ve anexo PENDENTE de varredura em qualquer tenant, por d.| SISTEMA           | INFO     | 1
+     |       |           |.esenho)                                                                                 |                   |          | 
+ 520 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | SISTEMA           | 0        | 0
+ 521 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | SISTEMA           | 0        | 0
+ 522 | b     | PASSOU    | atualizar E1                                                                            | SISTEMA           | NEGADO   | 0
+ 523 | b     | PASSOU    | E1 invisivel                                                                            | ADM_A_NA_CLIN_B   | 0        | 0
+ 524 | b     | PASSOU    | historico de E1 invisivel                                                               | ADM_A_NA_CLIN_B   | 0        | 0
+ 525 | b     | PASSOU    | anexo de E1 invisivel                                                                   | ADM_A_NA_CLIN_B   | 0        | 0
+ 526 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | ADM_A_NA_CLIN_B   | 0        | 0
+ 527 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | ADM_A_NA_CLIN_B   | 0        | 0
+ 528 | b     | PASSOU    | atualizar E1                                                                            | ADM_A_NA_CLIN_B   | NEGADO   | 0
+ 529 | b     | PASSOU    | E1 invisivel                                                                            | REC_A_FINGE_ADMIN | 0        | 0
+ 530 | b     | PASSOU    | historico de E1 invisivel                                                               | REC_A_FINGE_ADMIN | 0        | 0
+ 531 | b     | PASSOU    | anexo de E1 invisivel                                                                   | REC_A_FINGE_ADMIN | 0        | 0
+ 532 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | REC_A_FINGE_ADMIN | 0        | 0
+ 533 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | REC_A_FINGE_ADMIN | 0        | 0
+ 534 | b     | PASSOU    | atualizar E1                                                                            | REC_A_FINGE_ADMIN | NEGADO   | 0
+ 535 | b     | PASSOU    | E1 invisivel                                                                            | ADM_A_INATIVO     | 0        | 0
+ 536 | b     | PASSOU    | historico de E1 invisivel                                                               | ADM_A_INATIVO     | 0        | 0
+ 537 | b     | PASSOU    | anexo de E1 invisivel                                                                   | ADM_A_INATIVO     | 0        | 0
+ 538 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | ADM_A_INATIVO     | 0        | 0
+ 539 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | ADM_A_INATIVO     | 0        | 0
+ 540 | b     | PASSOU    | atualizar E1                                                                            | ADM_A_INATIVO     | NEGADO   | 0
+ 541 | b     | PASSOU    | E1 invisivel                                                                            | CLIN_INEXISTENTE  | 0        | 0
+ 542 | b     | PASSOU    | historico de E1 invisivel                                                               | CLIN_INEXISTENTE  | 0        | 0
+ 543 | b     | PASSOU    | anexo de E1 invisivel                                                                   | CLIN_INEXISTENTE  | 0        | 0
+ 544 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | CLIN_INEXISTENTE  | 0        | 0
+ 545 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | CLIN_INEXISTENTE  | 0        | 0
+ 546 | b     | PASSOU    | atualizar E1                                                                            | CLIN_INEXISTENTE  | NEGADO   | 0
+ 547 | b     | PASSOU    | E1 invisivel                                                                            | VAZIO             | 0        | 0
+ 548 | b     | PASSOU    | historico de E1 invisivel                                                               | VAZIO             | 0        | 0
+ 549 | b     | PASSOU    | anexo de E1 invisivel                                                                   | VAZIO             | 0        | 0
+ 550 | b     | PASSOU    | contrarreferencia de E1 invisivel                                                       | VAZIO             | 0        | 0
+ 551 | b     | PASSOU    | motivo_cifrado de E1 ilegivel                                                           | VAZIO             | 0        | 0
+ 552 | b     | PASSOU    | atualizar E1                                                                            | VAZIO             | NEGADO   | 0
+ 553 | b     | PASSOU    | E3 (destino A sem consentimento) visivel                                                | ENC_E             | POSITIVO | 1
+ 554 | b     | PASSOU    | E3 (destino A sem consentimento) visivel                                                | PAC_X             | POSITIVO | 1
+ 555 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | ADM_A             | 0        | 0
+ 556 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | REC_A             | 0        | 0
+ 557 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | MED_A             | 0        | 0
+ 558 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | ADM_B             | 0        | 0
+ 559 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | PAC_A             | 0        | 0
+ 560 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | PAC_B             | 0        | 0
+ 561 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | ENC_E2            | 0        | 0
+ 562 | b     | PASSOU    | E3 (destino A sem consentimento) invisivel                                              | SISTEMA           | 0        | 0
+ 563 | b     | PASSOU    | E2 visivel                                                                              | ENC_E             | POSITIVO | 1
+ 564 | b     | PASSOU    | E2 visivel                                                                              | ADM_B             | POSITIVO | 1
+ 565 | b     | PASSOU    | E2 visivel                                                                              | MED_B             | POSITIVO | 1
+ 566 | b     | PASSOU    | E2 visivel                                                                              | PAC_B             | POSITIVO | 1
+ 567 | b     | PASSOU    | E2 invisivel                                                                            | ADM_A             | 0        | 0
+ 568 | b     | PASSOU    | E2 invisivel                                                                            | REC_A             | 0        | 0
+ 569 | b     | PASSOU    | E2 invisivel                                                                            | MED_A             | 0        | 0
+ 570 | b     | PASSOU    | E2 invisivel                                                                            | PAC_A             | 0        | 0
+ 571 | b     | PASSOU    | E2 invisivel                                                                            | PAC_X             | 0        | 0
+ 572 | b     | PASSOU    | E2 invisivel                                                                            | ENC_E2            | 0        | 0
+ 573 | b     | PASSOU    | paciente pacA visivel a A (vinculo)                                                     | ADM_A             | POSITIVO | 1
+ 574 | b     | PASSOU    | paciente pacB invisivel a A                                                             | ADM_A             | 0        | 0
+ 575 | b     | PASSOU    | paciente pacA invisivel a B                                                             | ADM_B             | 0        | 0
+ 576 | b     | PASSOU    | paciente pacX invisivel a A (E3 sem consentimento)                                      | ADM_A             | 0        | 0
+ 577 | b     | PASSOU    | paciente pacA invisivel a PAC_B                                                         | PAC_B             | 0        | 0
+ 578 | b     | PASSOU    | pacA visivel ao encaminhador origem (via E1)                                            | ENC_E             | POSITIVO | 1
+ 579 | b     | PASSOU    | pacA invisivel a outro encaminhador                                                     | ENC_E2            | 0        | 0
+ 580 | b     | PASSOU    | link publico ve so o proprio link                                                       | LINK_E1           | POSITIVO | 1
+ 581 | b     | PASSOU    | link publico nao ve link de E2                                                          | LINK_E1           | 0        | 0
+ 582 | b     | PASSOU    | link publico nao ve encaminhamento                                                      | LINK_E1           | 0        | 0
+ 583 | b     | PASSOU    | SISTEMA ve so expirados (E7)                                                            | SISTEMA           | POSITIVO | 1
+ 584 | b     | PASSOU    | SISTEMA nao ve nao-expirados (E1)                                                       | SISTEMA           | 0        | 0
+ 585 | b     | PASSOU    | antes de revogar: A ve E5                                                               | ADM_A             | POSITIVO | 1
+ 586 | b     | PASSOU    | paciente revoga consentimento de E5; A deixa de ver E5                                  | PAC_A             | 0        | 0
+ 587 | b     | PASSOU    | outro encaminhador nao emite link para E1                                               | ENC_E2            | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "link_paciente"
+ 588 | b     | PASSOU    | outro encaminhador nao anexa em E1                                                      | ENC_E2            | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "anexo_encaminhamento"
+ 589 | b     | PASSOU    | PAC_B nao anexa em E1                                                                   | PAC_B             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "anexo_encaminhamento"
+ 590 | b     | PASSOU    | MED_B nao grava contrarreferencia de E1                                                 | MED_B             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "contrarreferencia"
+ 591 | b     | PASSOU    | MED_A nao grava contrarreferencia de E2 (destino B)                                     | MED_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "contrarreferencia"
+ 592 | b     | PASSOU    | controle: MED_A grava contrarreferencia de E1 (destino A)                               | MED_A             | POSITIVO | 1
+ 593 | b     | PASSOU    | terceiro nao atualiza E1 (PAC_B)                                                        | PAC_B             | NEGADO   | 0
+ 594 | b     | PASSOU    | terceiro nao atualiza E1 (ADM_B)                                                        | ADM_B             | NEGADO   | 0
+ 595 | b     | PASSOU    | terceiro nao atualiza E1 (ENC_E2)                                                       | ENC_E2            | NEGADO   | 0
+ 596 | b     | PASSOU    | terceiro nao apaga E1 (todos os papeis)                                                 | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table encaminham.
+     |       |           |                                                                                         |                   |          |.ento
+ 597 | e     | PASSOU    | UPDATE em evento_auditoria                                                              | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 598 | e     | PASSOU    | DELETE em evento_auditoria                                                              | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 599 | e     | PASSOU    | TRUNCATE em evento_auditoria                                                            | ADM_A             | ERRO     | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 600 | e     | PASSOU    | UPDATE em historico_status_encaminhamento                                               | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 601 | e     | PASSOU    | DELETE em historico_status_encaminhamento                                               | ADM_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 602 | e     | PASSOU    | TRUNCATE em historico_status_encaminhamento                                             | ADM_A             | ERRO     | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 603 | e     | PASSOU    | UPDATE em evento_auditoria                                                              | ADM_B             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 604 | e     | PASSOU    | DELETE em evento_auditoria                                                              | ADM_B             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 605 | e     | PASSOU    | TRUNCATE em evento_auditoria                                                            | ADM_B             | ERRO     | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 606 | e     | PASSOU    | UPDATE em historico_status_encaminhamento                                               | ADM_B             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 607 | e     | PASSOU    | DELETE em historico_status_encaminhamento                                               | ADM_B             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 608 | e     | PASSOU    | TRUNCATE em historico_status_encaminhamento                                             | ADM_B             | ERRO     | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 609 | e     | PASSOU    | UPDATE em evento_auditoria                                                              | SISTEMA           | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 610 | e     | PASSOU    | DELETE em evento_auditoria                                                              | SISTEMA           | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 611 | e     | PASSOU    | TRUNCATE em evento_auditoria                                                            | SISTEMA           | ERRO     | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 612 | e     | PASSOU    | UPDATE em historico_status_encaminhamento                                               | SISTEMA           | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 613 | e     | PASSOU    | DELETE em historico_status_encaminhamento                                               | SISTEMA           | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 614 | e     | PASSOU    | TRUNCATE em historico_status_encaminhamento                                             | SISTEMA           | ERRO     | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 615 | e     | PASSOU    | UPDATE em evento_auditoria                                                              | ENC_E             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 616 | e     | PASSOU    | DELETE em evento_auditoria                                                              | ENC_E             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 617 | e     | PASSOU    | TRUNCATE em evento_auditoria                                                            | ENC_E             | ERRO     | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 618 | e     | PASSOU    | UPDATE em historico_status_encaminhamento                                               | ENC_E             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 619 | e     | PASSOU    | DELETE em historico_status_encaminhamento                                               | ENC_E             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 620 | e     | PASSOU    | TRUNCATE em historico_status_encaminhamento                                             | ENC_E             | ERRO     | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 621 | e     | PASSOU    | UPDATE em evento_auditoria                                                              | PAC_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 622 | e     | PASSOU    | DELETE em evento_auditoria                                                              | PAC_A             | NEGADO   | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 623 | e     | PASSOU    | TRUNCATE em evento_auditoria                                                            | PAC_A             | ERRO     | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 624 | e     | PASSOU    | UPDATE em historico_status_encaminhamento                                               | PAC_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 625 | e     | PASSOU    | DELETE em historico_status_encaminhamento                                               | PAC_A             | NEGADO   | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 626 | e     | PASSOU    | TRUNCATE em historico_status_encaminhamento                                             | PAC_A             | ERRO     | ERRO[42501]: permission denied for table historico_.
+     |       |           |                                                                                         |                   |          |.status_encaminhamento
+ 627 | e     | PASSOU    | UPDATE auditoria da propria clinica: permission denied                                  | ADM_A             | ERRO     | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 628 | e     | PASSOU    | DELETE auditoria da propria clinica: permission denied                                  | ADM_A             | ERRO     | ERRO[42501]: permission denied for table evento_aud.
+     |       |           |                                                                                         |                   |          |.itoria
+ 629 | e     | PASSOU    | controle: INSERT em auditoria funciona                                                  | ADM_A             | POSITIVO | 1
+ 630 | f     | PASSOU    | clinica_id NULL em agendamento                                                          | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 631 | f     | PASSOU    | clinica_id NULL em horario_atendimento                                                  | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "horario_atendimento"
+ 632 | f     | PASSOU    | clinica_id NULL em paciente_clinica                                                     | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "paciente_clinica"
+ 633 | f     | PASSOU    | clinica_id NULL em vaga_encaminhamento                                                  | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "vaga_encaminhamento"
+ 634 | f     | PASSOU    | clinica_id NULL em profissional_clinica                                                 | ADM_A             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "profissional_clinica"
+ 635 | f     | PASSOU    | clinica_id NULL em consentimento (COMPARTILHAR_CASO exige)                              | PAC_A             | ERRO     | ERRO[23514]: new row for relation "consentimento" v.
+     |       |           |                                                                                         |                   |          |.iolates check constraint "consentimento_check"
+ 636 | f     | INFO      | clinica_id NULL em evento_auditoria (permitido por desenho)                             | ADM_A             | INFO     | 1
+ 637 | f     | PASSOU    | UUID inexistente como clinica_id: nada visivel                                          | CLIN_INEXISTENTE  | 0        | 0
+ 638 | f     | PASSOU    | UUID inexistente: insert em agendamento (clinica_id inexistente)                        | CLIN_INEXISTENTE  | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 639 | f     | PASSOU    | UUID inexistente no contexto, insert com clinica A                                      | CLIN_INEXISTENTE  | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 640 | f     | PASSOU    | ctx forjado: usuario de A com clinica_id de B nao ve B                                  | ADM_A_NA_CLIN_B   | 0        | 0
+ 641 | f     | PASSOU    | ctx forjado: usuario de A com clinica_id de B nao insere em B                           | ADM_A_NA_CLIN_B   | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 642 | f     | PASSOU    | recepcao fingindo papel ADMIN (usuario_clinica manda no papel)                          | REC_A_FINGE_ADMIN | 0        | 0
+ 643 | f     | PASSOU    | usuario inativo na clinica nao ve nada                                                  | ADM_A_INATIVO     | 0        | 0
+ 644 | f     | PASSOU    | UPDATE agendamento SET clinica_id=B (mover linha)                                       | ADM_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 645 | f     | PASSOU    | UPDATE profissional_clinica SET clinica_id=B                                            | ADM_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "profissional_clinica"
+ 646 | f     | PASSOU    | UPDATE horario_atendimento SET clinica_id=B                                             | ADM_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "horario_atendimento"
+ 647 | f     | PASSOU    | UPDATE paciente_clinica SET clinica_id=B                                                | ADM_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "paciente_clinica"
+ 648 | f     | PASSOU    | UPDATE vaga_encaminhamento SET clinica_id=B                                             | ADM_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "vaga_encaminhamento"
+ 649 | f     | PASSOU    | UPDATE usuario_clinica SET clinica_id=B                                                 | ADM_A             | NEGADO   | 0
+ 650 | f     | PASSOU    | UPDATE flag_clinica SET clinica_id=B                                                    | ADM_A             | NEGADO   | 0
+ 651 | f     | PASSOU    | UPDATE clinica SET id=B                                                                 | ADM_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "clinica"
+ 652 | f     | PASSOU    | UPDATE clinica B (nome)                                                                 | ADM_A             | NEGADO   | 0
+ 653 | f     | PASSOU    | UPDATE agendamento SET clinica_id=B (mover linha)                                       | REC_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 654 | f     | PASSOU    | UPDATE profissional_clinica SET clinica_id=B                                            | REC_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "profissional_clinica"
+ 655 | f     | PASSOU    | UPDATE horario_atendimento SET clinica_id=B                                             | REC_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "horario_atendimento"
+ 656 | f     | PASSOU    | UPDATE paciente_clinica SET clinica_id=B                                                | REC_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "paciente_clinica"
+ 657 | f     | PASSOU    | UPDATE vaga_encaminhamento SET clinica_id=B                                             | REC_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "vaga_encaminhamento"
+ 658 | f     | PASSOU    | UPDATE usuario_clinica SET clinica_id=B                                                 | REC_A             | NEGADO   | 0
+ 659 | f     | PASSOU    | UPDATE flag_clinica SET clinica_id=B                                                    | REC_A             | NEGADO   | 0
+ 660 | f     | PASSOU    | UPDATE clinica SET id=B                                                                 | REC_A             | NEGADO   | 0
+ 661 | f     | PASSOU    | UPDATE clinica B (nome)                                                                 | REC_A             | NEGADO   | 0
+ 662 | f     | PASSOU    | UPDATE agendamento SET clinica_id=B (mover linha)                                       | MED_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "agendamento"
+ 663 | f     | PASSOU    | UPDATE profissional_clinica SET clinica_id=B                                            | MED_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "profissional_clinica"
+ 664 | f     | PASSOU    | UPDATE horario_atendimento SET clinica_id=B                                             | MED_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "horario_atendimento"
+ 665 | f     | PASSOU    | UPDATE paciente_clinica SET clinica_id=B                                                | MED_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "paciente_clinica"
+ 666 | f     | PASSOU    | UPDATE vaga_encaminhamento SET clinica_id=B                                             | MED_A             | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |       |           |                                                                                         |                   |          |.licy for table "vaga_encaminhamento"
+ 667 | f     | PASSOU    | UPDATE usuario_clinica SET clinica_id=B                                                 | MED_A             | NEGADO   | 0
+ 668 | f     | PASSOU    | UPDATE flag_clinica SET clinica_id=B                                                    | MED_A             | NEGADO   | 0
+ 669 | f     | PASSOU    | UPDATE clinica SET id=B                                                                 | MED_A             | NEGADO   | 0
+ 670 | f     | PASSOU    | UPDATE clinica B (nome)                                                                 | MED_A             | NEGADO   | 0
+ 671 | f     | PASSOU    | UPDATE consentimento SET clinica_id (sem privilegio de coluna)                          | PAC_A             | ERRO     | ERRO[42501]: permission denied for table consentime.
+     |       |           |                                                                                         |                   |          |.nto
+ 672 | f     | PASSOU    | FK composta: agendamento(clinica A) -> profissional_clinica de B                        | ADM_A             | ERRO     | ERRO[23503]: insert or update on table "agendamento.
+     |       |           |                                                                                         |                   |          |." violates foreign key constraint "agendamento_clin.
+     |       |           |                                                                                         |                   |          |.ica_id_profissional_c
+ 673 | f     | PASSOU    | FK composta: horario(clinica A) -> profissional_clinica de B                            | ADM_A             | ERRO     | ERRO[23503]: insert or update on table "horario_ate.
+     |       |           |                                                                                         |                   |          |.ndimento" violates foreign key constraint "horario_.
+     |       |           |                                                                                         |                   |          |.atendimento_clinica_i
+ 674 | f     | PASSOU    | FK composta: vaga(clinica A) -> profissional_clinica de B                               | ADM_A             | ERRO     | ERRO[23503]: insert or update on table "vaga_encami.
+     |       |           |                                                                                         |                   |          |.nhamento" violates foreign key constraint "vaga_enc.
+     |       |           |                                                                                         |                   |          |.aminhamento_clinica_i
+ 675 | f     | PASSOU    | FK composta: UPDATE agendamento aponta profissional_clinica de B                        | ADM_A             | NEGADO   | ERRO[23P01]: conflicting key value violates exclusi.
+     |       |           |                                                                                         |                   |          |.on constraint "agendamento_profissional_clinica_id_.
+     |       |           |                                                                                         |                   |          |.tstzrange_excl"
+ 676 | f     | FALHOU    | FK simples: agendamento(A) -> paciente_id de paciente so de B                           | ADM_A             | ERRO     | 1
+ 677 | f     | INFO      | FK simples: oraculo de existencia (UUID inexistente x existente em outro tenant)        | ADM_A             | INFO     | ERRO[23503]: insert or update on table "agendamento.
+     |       |           |                                                                                         |                   |          |." violates foreign key constraint "agendamento_paci.
+     |       |           |                                                                                         |                   |          |.ente_id_fkey"
+ 678 | f     | FALHOU    | FK simples: agendamento(A) origem ENCAMINHAMENTO apontando E2 (de B)                    | ADM_A             | ERRO     | 1
+ 679 | f     | FALHOU    | paciente_clinica(A, pacB) por UUID: A passa a ler dados de pacB?                        | REC_A             | 0        | 1
+ 680 | f     | FALHOU    | encaminhamento criado com paciente_id de B por UUID: origem passa a ler pacB?           | ENC_E             | 0        | 1
+ 681 | f     | FALHOU    | mesmo vazamento por MEDICO da clinica A (papel MEDICO + profissional proprio)           | MED_A             | 0        | 1
+ 682 | f     | FALHOU    | UPDATE E1.paciente_id := pacB pela origem: origem passa a ler pacB?                     | ENC_E             | 0        | 1
+ 683 | f     | FALHOU    | consentimento forjado por PAC_A para E3 (de pacX): A passa a ver E3?                    | PAC_A             | 0        | 1
+ 684 | f     | PASSOU    | consentimento forjado por PAC_B para E1 (de pacA) em nome da clinica B: B passa a ver E.| PAC_B             | 0        | 0
+     |       |           |.1?                                                                                      |                   |          | 
+ 685 | f     | FALHOU    | historico forjado: PAC_A insere linha de historico em E1 (autor/papel livres)           | PAC_A             | ERRO     | 1
+ 686 | f     | FALHOU    | historico forjado: ENC_E insere linha de historico em E1                                | ENC_E             | ERRO     | 1
+ 687 | f     | FALHOU    | PAC_A altera motivo_cifrado de E1 (dado clinico do medico)                              | PAC_A             | NEGADO   | 1
+ 688 | f     | FALHOU    | destino (ADM_A) altera motivo_cifrado de E1                                             | ADM_A             | NEGADO   | 1
+ 689 | f     | FALHOU    | PAC_A troca profissional_origem_id de E1 por si/outro                                   | PAC_A             | NEGADO   | 1
+ 690 | f     | INFO      | profissional global: A le telefone/e-mail de profissional so de B (INFO, global por des.| ADM_A             | INFO     | 1
+     |       |           |.enho)                                                                                   |                   |          | 
+ 691 | d     | PASSOU    | transacao 1 com contexto A enxerga linhas                                               | local             | POSITIVO | 1
+ 692 | d     | PASSOU    | transacao 2 (apos COMMIT) nao enxerga nada                                              | local             | 0        | 0
+ 693 | d     | PASSOU    | app.clinica_id apos COMMIT e vazio/nulo                                                 | local             | vazio    | ""
+ 694 | d     | PASSOU    | apos ROLLBACK o contexto some                                                           | local             | 0        | 0
+ 695 | d     | INFO      | CONTROLE NEGATIVO: set_config(...,false) vaza entre transacoes (pool!)                  | sessao            | INFO     | 1
+ 696 | d     | PASSOU    | limpeza do controle: contexto vazio nega de novo                                        | sessao            | 0        | 0
+ 697 | estad.| INFO      | ENC_E: CRIADO -> ATENDIDO (pulo T4/T5, ator sem permissao)                              | ENC_E             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 698 | estad.| INFO      | ENC_E: CRIADO -> CONTRARREFERIDO (origem finge contrarreferencia)                       | ENC_E             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 699 | estad.| INFO      | PAC_A: CRIADO -> ATENDIDO                                                               | PAC_A             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 700 | estad.| INFO      | PAC_A: CRIADO -> SOLICITADO sem passar por link/consentimento (T3 pulado)               | PAC_A             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 701 | estad.| INFO      | ADM_A (destino): CRIADO -> AGENDADO sem agendamento                                     | ADM_A             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 702 | estad.| INFO      | ENC_E: estado final CANCELADO -> CRIADO (ressuscitar E6)                                | ENC_E             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 703 | estad.| INFO      | ENC_E: estado final CANCELADO -> AGENDADO                                               | ENC_E             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 704 | estad.| PASSOU    | SISTEMA: expirado E7 -> ATENDIDO (so EXPIRADO permitido pela politica)                  | SISTEMA           | NEGADO   | ERRO[42501]: new row violates row-level security po.
+     |.os    |           |                                                                                         |                   |          |.licy for table "encaminhamento"
+ 705 | estad.| FALHOU    | SISTEMA: expirado E7 -> EXPIRADO (T8, legitimo)                                         | SISTEMA           | POSITIVO | ERRO[42501]: new row violates row-level security po.
+     |.os    |           |                                                                                         |                   |          |.licy for table "encaminhamento"
+ 706 | estad.| PASSOU    | SISTEMA: T8 sem WHERE na coluna lida (UPDATE ... SET status=EXPIRADO)                   | SISTEMA           | POSITIVO | 1
+     |.os    |           |                                                                                         |                   |          | 
+ 707 | estad.| FALHOU    | SISTEMA: T8 por criterio expira_em < now()                                              | SISTEMA           | POSITIVO | ERRO[42501]: new row violates row-level security po.
+     |.os    |           |                                                                                         |                   |          |.licy for table "encaminhamento"
+ 708 | estad.| PASSOU    | status fora dos 8 valores (CHECK)                                                       | ENC_E             | ERRO     | ERRO[23514]: new row for relation "encaminhamento" .
+     |.os    |           |                                                                                         |                   |          |.violates check constraint "encaminhamento_status_ch.
+     |       |           |                                                                                         |                   |          |.eck"
+ 709 | estad.| PASSOU    | INSERT direto em status AGENDADO (policy exige CRIADO)                                  | ENC_E             | ERRO     | ERRO[42501]: new row violates row-level security po.
+     |.os    |           |                                                                                         |                   |          |.licy for table "encaminhamento"
+ 710 | estad.| INFO      | transicao ilegal deixa rastro no historico (gatilho registra de/para)                   | ENC_E             | INFO     | 1
+     |.os    |           |                                                                                         |                   |          | 
+(710 rows)
+
+
+===== PARTE 3: gatilhos de inclusao-so (como dono saas_owner e como superusuario) =====
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:589: NOTICE:  owner UPDATE evento_auditoria -> 0 linhas (FORCE RLS do dono: sem politica de UPDATE)
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:589: NOTICE:  owner DELETE evento_auditoria -> 0 linhas (FORCE RLS do dono: sem politica de DELETE)
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:589: NOTICE:  owner TRUNCATE evento_auditoria -> bloqueado: tabela evento_auditoria e so de inclusao (TRUNCATE)
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:589: NOTICE:  owner UPDATE historico -> 0 linhas (FORCE RLS do dono)
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:589: NOTICE:  owner DELETE historico -> 0 linhas (FORCE RLS do dono)
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:599: NOTICE:  superusuario UPDATE evento_auditoria -> bloqueado: tabela evento_auditoria e so de inclusao (UPDATE)
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:599: NOTICE:  superusuario DELETE evento_auditoria -> bloqueado: tabela evento_auditoria e so de inclusao (DELETE)
+
+===== INTEGRIDADE: fotografia antes x depois (nenhuma sonda persistiu mudanca, exceto auditoria de inclusao) =====
+psql:/home/claude/saas-agenda/docs/arquitetura/evidencias/teste-rls.sql:614: NOTICE:  tabelas alteradas apos todas as sondas: 0
+===== FIM =====
+teste-rls.sql exit=0
+## (d) concorrencia: duas conexoes ao mesmo tempo, contexto local so na transacao da primeira
+conexao 2 (sem contexto, em paralelo) ve agendamentos: 0
+BEGIN
+conexao 1 (contexto A, transacao aberta) ve agendamentos: 1
+
+COMMIT
+## desligando
+waiting for server to shut down.... done
+server stopped

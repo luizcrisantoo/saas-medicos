@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "73544a87-ed50-4200-b4aa-2e4db6e8f9b9",
+  "status": "current",
+  "command": "deliver",
+  "type": "lifecycle",
+  "input": "/home/claude/saas-agenda/docs/arquitetura/diagramas/lifecycle-encaminhamento.candidate.json",
+  "output": "/home/claude/saas-agenda/docs/arquitetura/diagramas/lifecycle-encaminhamento.html",
+  "specification": {
+    "sha256": "df3a7bb14b5fdbe87f05bdfbeda85ee9442eada9ca872d804b885316c34a4574",
+    "bytes": 35095
+  },
+  "artifact": {
+    "sha256": "d3116e115d540c8119a2641c39dcc3bbb11810a7e3f814f55b59326ecba2fe1b",
+    "bytes": 851445
+  }
+}

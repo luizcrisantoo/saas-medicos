@@ -1,0 +1,150 @@
+# red-team-sondas 2026-11-10T13:09:03Z. PostgreSQL 16.15 descartavel, modelo-v2.sql aplicado (exit 0), sondas como saas_app. Cada sonda em transacao desfeita.
+SET
+INSERT 0 2
+INSERT 0 2
+INSERT 0 2
+INSERT 0 3
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+======== SONDAS COMO saas_app ========
+SET
+SET
+--- RT1: recepcao A vincula paciente de B por UUID e troca o TELEFONE global dele
+BEGIN
+              set_config              |              set_config              | set_config 
+--------------------------------------+--------------------------------------+------------
+ aaaaaaaa-0000-0000-0000-000000000001 | aaaaaaaa-0000-0000-0001-000000000002 | RECEPCAO
+(1 row)
+
+INSERT 0 1
+UPDATE 1
+                  id                  |    telefone    
+--------------------------------------+----------------
+ bbbbbbbb-0000-0000-0003-000000000001 | +5581999999999
+(1 row)
+
+ROLLBACK
+--- RT2: PUBLICO_LINK zera tentativas, troca codigo_hash e estende expiracao do proprio link
+BEGIN
+  set_config  | set_config 
+--------------+------------
+ PUBLICO_LINK | 0101
+(1 row)
+
+UPDATE 1
+ tentativas_codigo | codigo_hash | estendido 
+-------------------+-------------+-----------
+                 0 | \xbeef      | t
+(1 row)
+
+ROLLBACK
+--- RT3: qualquer conexao saas_app declara SISTEMA e troca chave_storage de anexo PENDENTE
+BEGIN
+ set_config 
+------------
+ SISTEMA
+(1 row)
+
+UPDATE 1
+ chave_storage | status_varredura 
+---------------+------------------
+(0 rows)
+
+ROLLBACK
+--- RT4: contexto forjado so por GUC: PACIENTE com paciente_id alheio le paciente, encaminhamento e link
+BEGIN
+ set_config |              set_config              
+------------+--------------------------------------
+ PACIENTE   | bbbbbbbb-0000-0000-0003-000000000001
+(1 row)
+
+ pac | enc | anexos 
+-----+-----+--------
+   1 |   1 |      1
+(1 row)
+
+ROLLBACK
+--- RT5: ENCAMINHADOR com profissional_id de outro medico (CRM publico) le os encaminhamentos dele
+BEGIN
+  set_config  |              set_config              
+--------------+--------------------------------------
+ ENCAMINHADOR | eeeeeeee-0000-0000-0002-000000000001
+(1 row)
+
+ encaminhamentos_lidos | anexos 
+-----------------------+--------
+                     1 |      1
+(1 row)
+
+ROLLBACK
+--- RT6: auditoria forjada: ENCAMINHADOR grava evento com ator_id e papel de terceiro
+BEGIN
+  set_config  |              set_config              
+--------------+--------------------------------------
+ ENCAMINHADOR | eeeeeeee-0000-0000-0002-000000000001
+(1 row)
+
+INSERT 0 1
+ ?column? 
+----------
+ inserido
+(1 row)
+
+ROLLBACK
+--- RT7: PACIENTE marca agendamento na clinica B, profissional qualquer, sem encaminhamento nem vaga
+BEGIN
+ set_config |              set_config              
+------------+--------------------------------------
+ PACIENTE   | bbbbbbbb-0000-0000-0003-000000000001
+(1 row)
+
+INSERT 0 1
+ ?column? 
+----------
+ agendado
+(1 row)
+
+ROLLBACK
+--- RT8: MEDICO de A assina contrarreferencia como outro profissional (app.profissional_id nao conferido)
+BEGIN
+              set_config              |              set_config              | set_config |              set_config              
+--------------------------------------+--------------------------------------+------------+--------------------------------------
+ aaaaaaaa-0000-0000-0000-000000000001 | aaaaaaaa-0000-0000-0001-000000000003 | MEDICO     | bbbbbbbb-0000-0000-0002-000000000001
+(1 row)
+
+INSERT 0 1
+                         ?column?                          
+-----------------------------------------------------------
+ contrarreferencia gravada com autor MedB por usuario MedA
+(1 row)
+
+ROLLBACK
+--- RT9: oraculo por erro: ENCAMINHADOR cadastra CRM existente (resultado: erro de unicidade sem DETAIL, so revela existencia)
+BEGIN
+  set_config  
+--------------
+ ENCAMINHADOR
+(1 row)
+
+psql:sonda.sql:79: ERROR:  duplicate key value violates unique constraint "profissional_crm_crm_uf_key"
+ROLLBACK
+--- RT10: PACIENTE pede o proprio paciente em contexto e altera telefone (persistencia apos 1 acesso)
+BEGIN
+ set_config |              set_config              
+------------+--------------------------------------
+ PACIENTE   | bbbbbbbb-0000-0000-0003-000000000001
+(1 row)
+
+UPDATE 1
+    telefone    
+----------------
+ +5581988888888
+(1 row)
+
+ROLLBACK

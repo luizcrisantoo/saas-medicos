@@ -1,0 +1,340 @@
+{
+ "schema_version": 1,
+ "diagram_type": "architecture",
+ "meta": {
+  "title": "SaaS de atendimento para clínicas: arquitetura",
+  "locale": "pt-BR",
+  "output": ".archify/architecture-saas-clinicas/saas-clinicas.html",
+  "quality_profile": "showcase",
+  "translations": {
+   "legend.title": "Legenda",
+   "legend.architecture.frontend": "Interface",
+   "legend.architecture.backend": "Backend",
+   "legend.architecture.database": "Dados",
+   "legend.architecture.cloud": "Canal oficial",
+   "legend.architecture.security": "Segurança",
+   "legend.architecture.messagebus": "Mensageria",
+   "legend.architecture.external": "Externo"
+  }
+ },
+ "components": [
+  {
+   "id": "paciente",
+   "type": "external",
+   "label": "Paciente",
+   "sublabel": "quer tirar dúvida ou marcar",
+   "icon": "person",
+   "pos": [
+    40,
+    310
+   ],
+   "size": [
+    130,
+    64
+   ]
+  },
+  {
+   "id": "whatsapp",
+   "type": "cloud",
+   "label": "WhatsApp",
+   "sublabel": "Business Cloud API oficial",
+   "pos": [
+    250,
+    200
+   ],
+   "size": [
+    160,
+    64
+   ],
+   "tag": "templates aprovados"
+  },
+  {
+   "id": "chatbot",
+   "type": "frontend",
+   "label": "Chatbot do site",
+   "sublabel": "widget no site da clínica",
+   "pos": [
+    250,
+    420
+   ],
+   "size": [
+    160,
+    64
+   ]
+  },
+  {
+   "id": "webhook",
+   "type": "backend",
+   "label": "Webhook de entrada",
+   "sublabel": "normaliza os 2 canais",
+   "pos": [
+    500,
+    310
+   ],
+   "size": [
+    150,
+    64
+   ]
+  },
+  {
+   "id": "orquestrador",
+   "type": "backend",
+   "label": "Orquestrador",
+   "sublabel": "identifica clinic_id e intenção",
+   "pos": [
+    760,
+    310
+   ],
+   "size": [
+    170,
+    64
+   ],
+   "tag": "Spring Boot"
+  },
+  {
+   "id": "motor",
+   "type": "backend",
+   "label": "Motor de IA",
+   "sublabel": "responde dúvidas repetidas",
+   "pos": [
+    1000,
+    190
+   ],
+   "size": [
+    170,
+    64
+   ]
+  },
+  {
+   "id": "marcacao",
+   "type": "backend",
+   "label": "Fluxo de marcação",
+   "sublabel": "não cria agenda",
+   "icon": "calendar",
+   "pos": [
+    1000,
+    430
+   ],
+   "size": [
+    170,
+    64
+   ]
+  },
+  {
+   "id": "kb",
+   "type": "database",
+   "label": "Base de conhecimento",
+   "sublabel": "convênios, endereço, preparos",
+   "pos": [
+    1000,
+    20
+   ],
+   "size": [
+    170,
+    64
+   ],
+   "tag": "por clínica"
+  },
+  {
+   "id": "db",
+   "type": "database",
+   "label": "Banco multi-tenant",
+   "sublabel": "conversas, pacientes, configs",
+   "pos": [
+    760,
+    570
+   ],
+   "size": [
+    170,
+    64
+   ],
+   "tag": "isolado por clinic_id"
+  },
+  {
+   "id": "painel",
+   "type": "frontend",
+   "label": "Painel da recepção",
+   "sublabel": "atendente humano assume",
+   "icon": "person",
+   "pos": [
+    1290,
+    190
+   ],
+   "size": [
+    170,
+    64
+   ]
+  },
+  {
+   "id": "sistema",
+   "type": "external",
+   "label": "Sistema de gestão",
+   "sublabel": "o \"amigo\" da clínica",
+   "icon": "calendar",
+   "pos": [
+    1290,
+    430
+   ],
+   "size": [
+    170,
+    64
+   ],
+   "tag": "agenda já existente"
+  }
+ ],
+ "boundaries": [
+  {
+   "kind": "region",
+   "label": "Backend Java / Spring Boot · multi-tenant",
+   "wraps": [
+    "webhook",
+    "orquestrador",
+    "motor",
+    "marcacao"
+   ]
+  },
+  {
+   "kind": "security-group",
+   "label": "Só API oficial (Meta)",
+   "wraps": [
+    "whatsapp"
+   ]
+  }
+ ],
+ "connections": [
+  {
+   "id": "pac-wpp",
+   "from": "paciente",
+   "to": "whatsapp",
+   "label": "mensagem",
+   "variant": "emphasis"
+  },
+  {
+   "id": "pac-chat",
+   "from": "paciente",
+   "to": "chatbot",
+   "label": "chat"
+  },
+  {
+   "id": "wpp-webhook",
+   "from": "whatsapp",
+   "to": "webhook",
+   "label": "evento",
+   "variant": "emphasis"
+  },
+  {
+   "id": "chat-webhook",
+   "from": "chatbot",
+   "to": "webhook",
+   "label": "evento"
+  },
+  {
+   "id": "webhook-orq",
+   "from": "webhook",
+   "to": "orquestrador",
+   "label": "formato único",
+   "variant": "emphasis"
+  },
+  {
+   "id": "orq-motor",
+   "from": "orquestrador",
+   "to": "motor",
+   "label": "dúvida",
+   "variant": "emphasis"
+  },
+  {
+   "id": "motor-kb",
+   "from": "motor",
+   "to": "kb",
+   "label": "consulta"
+  },
+  {
+   "id": "motor-painel",
+   "from": "motor",
+   "to": "painel",
+   "label": "handoff: IA não resolve",
+   "variant": "dashed"
+  },
+  {
+   "id": "painel-kb",
+   "from": "painel",
+   "to": "kb",
+   "label": "edita a base"
+  },
+  {
+   "id": "orq-marcacao",
+   "from": "orquestrador",
+   "to": "marcacao",
+   "label": "quer marcar"
+  },
+  {
+   "id": "marcacao-sistema",
+   "from": "marcacao",
+   "to": "sistema",
+   "label": "link de agendamento",
+   "variant": "emphasis"
+  },
+  {
+   "id": "orq-db",
+   "from": "orquestrador",
+   "to": "db",
+   "label": "grava por clinic_id",
+   "variant": "security"
+  },
+  {
+   "id": "resposta",
+   "from": "orquestrador",
+   "to": "whatsapp",
+   "label": "resposta + botão \"Agende sua consulta\"",
+   "variant": "dashed",
+   "fromSide": "top",
+   "toSide": "top",
+   "via": [
+    [
+     845,
+     118
+    ],
+    [
+     330,
+     118
+    ]
+   ]
+  }
+ ],
+ "cards": [
+  {
+   "dot": "emerald",
+   "title": "Os 3 caminhos",
+   "items": [
+    "Dúvida: canal → webhook → orquestrador → Motor de IA → resposta no mesmo canal",
+    "Marcação: o SaaS entrega o link do sistema que a clínica já usa",
+    "IA não resolve: handoff para o painel e um atendente humano assume"
+   ]
+  },
+  {
+   "dot": "cyan",
+   "title": "Multi-tenant",
+   "items": [
+    "Uma instância atende várias clínicas: Rodrigo, CLIFOR, Memorial",
+    "Toda leitura e escrita filtrada por clinic_id",
+    "Cada clínica tem sua própria base de conhecimento"
+   ]
+  },
+  {
+   "dot": "amber",
+   "title": "WhatsApp sem bloqueio",
+   "items": [
+    "Só WhatsApp Business Cloud API oficial",
+    "Mensagem fora da janela de 24h só com template aprovado pela Meta"
+   ]
+  },
+  {
+   "dot": "rose",
+   "title": "LGPD (dado de saúde)",
+   "items": [
+    "Consentimento registrado no primeiro contato",
+    "Dados isolados por clínica, sem cruzamento entre tenants"
+   ]
+  }
+ ]
+}

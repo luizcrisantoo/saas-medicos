@@ -1,0 +1,83 @@
+# Sanidade rapida (nao substitui o criterio 9 do Testador): papel saas_app, contexto por set_config local. Executado logo apos modelo-v2-execucao.log no mesmo cluster.
+SET
+INSERT 0 1
+INSERT 0 2
+INSERT 0 2
+INSERT 0 2
+INSERT 0 1
+INSERT 0 1
+--- como saas_app: ENCAMINHADOR cria encaminhamento (trigger de historico)
+SET
+BEGIN
+  set_config  |              set_config              
+--------------+--------------------------------------
+ ENCAMINHADOR | 00000000-0000-0000-0000-0000000000f1
+(1 row)
+
+INSERT 0 1
+UPDATE 1
+ status_anterior |     status_novo     | autor_papel  
+-----------------+---------------------+--------------
+                 | CRIADO              | ENCAMINHADOR
+ CRIADO          | ENVIADO_AO_PACIENTE | ENCAMINHADOR
+(2 rows)
+
+ paciente_visivel_pela_origem 
+------------------------------
+                            1
+(1 row)
+
+COMMIT
+--- PACIENTE concede consentimento para a clinica A
+BEGIN
+ set_config |              set_config              
+------------+--------------------------------------
+ PACIENTE   | 00000000-0000-0000-0000-0000000000c1
+(1 row)
+
+INSERT 0 1
+ enc_visivel_paciente 
+----------------------
+                    1
+(1 row)
+
+COMMIT
+--- RECEPCAO clinica A (destino com consentimento) e clinica B
+BEGIN
+ set_config |              set_config              |              set_config              
+------------+--------------------------------------+--------------------------------------
+ RECEPCAO   | 00000000-0000-0000-0000-00000000000a | 00000000-0000-0000-0000-0000000000a1
+(1 row)
+
+ enc | pac | hist | cons | clin | vinc 
+-----+-----+------+------+------+------
+   1 |   1 |    2 |    1 |    1 |    1
+(1 row)
+
+COMMIT
+BEGIN
+ set_config |              set_config              |              set_config              
+------------+--------------------------------------+--------------------------------------
+ RECEPCAO   | 00000000-0000-0000-0000-00000000000b | 00000000-0000-0000-0000-0000000000b1
+(1 row)
+
+ enc | pac | hist | cons | clin | vinc 
+-----+-----+------+------+------+------
+   0 |   0 |    0 |    0 |    1 |    1
+(1 row)
+
+COMMIT
+--- auditoria so de inclusao
+BEGIN
+ set_config |              set_config              |              set_config              
+------------+--------------------------------------+--------------------------------------
+ RECEPCAO   | 00000000-0000-0000-0000-00000000000a | 00000000-0000-0000-0000-0000000000a1
+(1 row)
+
+INSERT 0 1
+COMMIT
+psql:/tmp/claude-0/pg-exec/sanidade.sql:51: ERROR:  permission denied for table evento_auditoria
+psql:/tmp/claude-0/pg-exec/sanidade.sql:52: ERROR:  permission denied for table evento_auditoria
+RESET
+psql:/tmp/claude-0/pg-exec/sanidade.sql:54: ERROR:  tabela evento_auditoria e so de inclusao (DELETE)
+CONTEXT:  PL/pgSQL function bloqueia_alteracao() line 2 at RAISE

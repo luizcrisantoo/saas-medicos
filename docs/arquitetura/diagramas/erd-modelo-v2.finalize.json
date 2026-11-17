@@ -1,0 +1,5164 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "erd",
+  "quality": "standard",
+  "startedAt": "2026-11-10T14:30:37.699Z",
+  "specification": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.candidate.json",
+    "sha256": "6e49838c70c6ffeadbc7538c6505a00392b9a2313eceae496269cc9854447bbc",
+    "bytes": 67079
+  },
+  "artifact": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+    "sha256": "7c20bb14804d287fbf02953a8d0bd313b10e628e33b73287eca493f11070cb63",
+    "bytes": 997017
+  },
+  "stages": {
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "/opt/node22/bin/node",
+        "/home/claude/archify-src/repo/archify/bin/archify.mjs",
+        "deliver",
+        "erd",
+        "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.candidate.json",
+        "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+        "--quality",
+        "standard",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "6e49838c70c6ffeadbc7538c6505a00392b9a2313eceae496269cc9854447bbc",
+          "bytes": 67079
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 55,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "usuario_clinica-clinica_id",
+                "from": "usuario_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 1,
+                "artifactIndex": 2
+              },
+              "otherRelationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "point": [
+                394,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "point": [
+                394,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                583,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "point": [
+                772,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "point": [
+                1162,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "point": [
+                1552,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "consentimento-encaminhamento_id",
+                "from": "consentimento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 40,
+                "artifactIndex": 41
+              },
+              "point": [
+                1552,
+                790
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1552,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "profissional_clinica-clinica_id",
+                "from": "profissional_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "point": [
+                394,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "point": [
+                394,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                583,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "point": [
+                772,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "point": [
+                1162,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-desafio_id",
+                "from": "sessao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                1579.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-desafio_id",
+                "from": "sessao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                386,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                724
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                748
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                197,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                772
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                390,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "point": [
+                1544,
+                1075.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-link_paciente_id",
+                "from": "envio_notificacao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 44,
+                "artifactIndex": 45
+              },
+              "point": [
+                1544,
+                1100
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-desafio_id",
+                "from": "envio_notificacao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 45,
+                "artifactIndex": 46
+              },
+              "point": [
+                1544,
+                1280
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "profissional_clinica-clinica_id",
+                "from": "profissional_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                434,
+                200
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_clinica-profissional_id",
+                "from": "profissional_clinica",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                595,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_clinica-profissional_id",
+                "from": "profissional_clinica",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                595,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                772,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                772,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "clinica_especialidade-clinica_id",
+                "from": "clinica_especialidade",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "point": [
+                780,
+                160
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "encaminhamento-profissional_origem_id",
+                "from": "encaminhamento",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "point": [
+                780,
+                600
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                780,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                780,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                1162,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-autor_profissional_id",
+                "from": "contrarreferencia",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 32,
+                "artifactIndex": 33
+              },
+              "point": [
+                1162,
+                750
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1162,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "contrarreferencia-encaminhamento_id",
+                "from": "contrarreferencia",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 30,
+                "artifactIndex": 31
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-encaminhamento_id",
+                "from": "link_paciente",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 33,
+                "artifactIndex": 34
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "point": [
+                1548,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "consentimento-encaminhamento_id",
+                "from": "consentimento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 40,
+                "artifactIndex": 41
+              },
+              "point": [
+                1548,
+                790
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1548,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-encaminhamento_id",
+                "from": "envio_notificacao",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 42,
+                "artifactIndex": 43
+              },
+              "point": [
+                1544,
+                1075.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "otherRelationship": {
+                "id": "consentimento-paciente_id",
+                "from": "consentimento",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 39,
+                "artifactIndex": 40
+              },
+              "point": [
+                1552,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-encaminhamento_id",
+                "from": "envio_notificacao",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 42,
+                "artifactIndex": 43
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/desktop-readability",
+              "nodeId": "usuario",
+              "owner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "viewportWidth": 1440,
+              "viewportHeight": 900,
+              "availableDiagramWidth": 930,
+              "budgetBasis": "legacy-930",
+              "readerContract": "declared-wide-v1",
+              "requestedTargetPx": 7.5,
+              "requestedTargetMet": false,
+              "budgetLimit": "legacy",
+              "viewBoxWidth": 1930,
+              "scale": 0.48186528497409326,
+              "text": "PK",
+              "detail": "context",
+              "sourceFontPx": 9,
+              "projectedFontPx": 4.33678756476684,
+              "minimumProjectedFontPx": 6
+            }
+          ]
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 1137,
+      "command": [
+        "/opt/node22/bin/node",
+        "/home/claude/archify-src/repo/archify/bin/archify.mjs",
+        "deliver",
+        "erd",
+        "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.candidate.json",
+        "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+        "--quality",
+        "standard",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "09bd40eb-2986-4f79-b04a-9ac81394b5b2",
+        "ok": true,
+        "command": "deliver",
+        "type": "erd",
+        "input": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.candidate.json",
+        "output": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+        "specification": {
+          "sha256": "6e49838c70c6ffeadbc7538c6505a00392b9a2313eceae496269cc9854447bbc",
+          "bytes": 67079
+        },
+        "artifact": {
+          "sha256": "7c20bb14804d287fbf02953a8d0bd313b10e628e33b73287eca493f11070cb63",
+          "bytes": 997017
+        },
+        "validation": {
+          "checksPassed": 9,
+          "checkCount": 9,
+          "compositionProfile": "standard",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 55,
+          "compositionIssues": [
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "usuario_clinica-clinica_id",
+                "from": "usuario_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 1,
+                "artifactIndex": 2
+              },
+              "otherRelationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "point": [
+                394,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "point": [
+                394,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                583,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "point": [
+                772,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "point": [
+                1162,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "point": [
+                1552,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "consentimento-encaminhamento_id",
+                "from": "consentimento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 40,
+                "artifactIndex": 41
+              },
+              "point": [
+                1552,
+                790
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1552,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "profissional_clinica-clinica_id",
+                "from": "profissional_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "point": [
+                394,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "point": [
+                394,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                583,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "point": [
+                772,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "point": [
+                1162,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-desafio_id",
+                "from": "sessao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                1579.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-desafio_id",
+                "from": "sessao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                386,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                724
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                748
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                197,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                772
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                390,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "point": [
+                1544,
+                1075.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-link_paciente_id",
+                "from": "envio_notificacao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 44,
+                "artifactIndex": 45
+              },
+              "point": [
+                1544,
+                1100
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-desafio_id",
+                "from": "envio_notificacao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 45,
+                "artifactIndex": 46
+              },
+              "point": [
+                1544,
+                1280
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "profissional_clinica-clinica_id",
+                "from": "profissional_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                434,
+                200
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_clinica-profissional_id",
+                "from": "profissional_clinica",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                595,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_clinica-profissional_id",
+                "from": "profissional_clinica",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                595,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                772,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                772,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "clinica_especialidade-clinica_id",
+                "from": "clinica_especialidade",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "point": [
+                780,
+                160
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "encaminhamento-profissional_origem_id",
+                "from": "encaminhamento",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "point": [
+                780,
+                600
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                780,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                780,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                1162,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-autor_profissional_id",
+                "from": "contrarreferencia",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 32,
+                "artifactIndex": 33
+              },
+              "point": [
+                1162,
+                750
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1162,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "contrarreferencia-encaminhamento_id",
+                "from": "contrarreferencia",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 30,
+                "artifactIndex": 31
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-encaminhamento_id",
+                "from": "link_paciente",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 33,
+                "artifactIndex": 34
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "point": [
+                1548,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "consentimento-encaminhamento_id",
+                "from": "consentimento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 40,
+                "artifactIndex": 41
+              },
+              "point": [
+                1548,
+                790
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1548,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-encaminhamento_id",
+                "from": "envio_notificacao",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 42,
+                "artifactIndex": 43
+              },
+              "point": [
+                1544,
+                1075.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "otherRelationship": {
+                "id": "consentimento-paciente_id",
+                "from": "consentimento",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 39,
+                "artifactIndex": 40
+              },
+              "point": [
+                1552,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-encaminhamento_id",
+                "from": "envio_notificacao",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 42,
+                "artifactIndex": 43
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/desktop-readability",
+              "nodeId": "usuario",
+              "owner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "viewportWidth": 1440,
+              "viewportHeight": 900,
+              "availableDiagramWidth": 930,
+              "budgetBasis": "legacy-930",
+              "readerContract": "declared-wide-v1",
+              "requestedTargetPx": 7.5,
+              "requestedTargetMet": false,
+              "budgetLimit": "legacy",
+              "viewBoxWidth": 1930,
+              "scale": 0.48186528497409326,
+              "text": "PK",
+              "detail": "context",
+              "sourceFontPx": 9,
+              "projectedFontPx": 4.33678756476684,
+              "minimumProjectedFontPx": 6
+            }
+          ]
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 334,
+      "command": [
+        "/opt/node22/bin/node",
+        "/home/claude/archify-src/repo/archify/bin/archify.mjs",
+        "check",
+        "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+        "artifact": {
+          "sha256": "7c20bb14804d287fbf02953a8d0bd313b10e628e33b73287eca493f11070cb63",
+          "bytes": 997017
+        },
+        "checks": [
+          {
+            "name": "single_svg",
+            "ok": true,
+            "details": [
+              "found 1 <svg> block(s)"
+            ]
+          },
+          {
+            "name": "finite_svg",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "orthogonal_arrows",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "label_route_clearance",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "relationship_crossings",
+            "ok": true,
+            "details": [
+              "[composition/proper-crossing] standard relationship id \"usuario_clinica-clinica_id\" (\"usuario_clinica\" -> \"clinica\") crosses relationship id \"profissional-usuario_id\" (\"profissional\" -> \"usuario\") at [394, 180]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"horario_atendimento-clinica_id\" (\"horario_atendimento\" -> \"profissional_clinica\") at [394, 940]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"vaga_encaminhamento-clinica_id\" (\"vaga_encaminhamento\" -> \"profissional_clinica\") at [394, 940]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"agendamento-clinica_id\" (\"agendamento\" -> \"profissional_clinica\") at [390, 940]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"flag_clinica-clinica_id\" (\"flag_clinica\" -> \"clinica\") at [583, 940]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"desafio_encaminhador-profissional_id\" (\"desafio_encaminhador\" -> \"profissional\") at [772, 940]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"anexo_encaminhamento-encaminhamento_id\" (\"anexo_encaminhamento\" -> \"encaminhamento\") at [1162, 940]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"paciente_clinica-encaminhamento_id\" (\"paciente_clinica\" -> \"encaminhamento\") at [1552, 428]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"consentimento-encaminhamento_id\" (\"consentimento\" -> \"encaminhamento\") at [1552, 790]",
+              "[composition/proper-crossing] standard relationship id \"sessao-paciente_id\" (\"sessao\" -> \"paciente\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [1552, 636]",
+              "[composition/proper-crossing] standard relationship id \"sessao-profissional_id\" (\"sessao\" -> \"profissional\") crosses relationship id \"profissional_clinica-clinica_id\" (\"profissional_clinica\" -> \"clinica\") at [394, 560]",
+              "[composition/proper-crossing] standard relationship id \"sessao-profissional_id\" (\"sessao\" -> \"profissional\") crosses relationship id \"flag_clinica-clinica_id\" (\"flag_clinica\" -> \"clinica\") at [405, 560]",
+              "[composition/proper-crossing] standard relationship id \"sessao-profissional_id\" (\"sessao\" -> \"profissional\") crosses relationship id \"contrarreferencia-clinica_id\" (\"contrarreferencia\" -> \"clinica\") at [394, 560]",
+              "[composition/proper-crossing] standard relationship id \"sessao-profissional_id\" (\"sessao\" -> \"profissional\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [394, 560]",
+              "[composition/proper-crossing] standard relationship id \"sessao-link_paciente_id\" (\"sessao\" -> \"link_paciente\") crosses relationship id \"horario_atendimento-clinica_id\" (\"horario_atendimento\" -> \"profissional_clinica\") at [394, 900]",
+              "[composition/proper-crossing] standard relationship id \"sessao-link_paciente_id\" (\"sessao\" -> \"link_paciente\") crosses relationship id \"vaga_encaminhamento-clinica_id\" (\"vaga_encaminhamento\" -> \"profissional_clinica\") at [394, 900]",
+              "[composition/proper-crossing] standard relationship id \"sessao-link_paciente_id\" (\"sessao\" -> \"link_paciente\") crosses relationship id \"agendamento-clinica_id\" (\"agendamento\" -> \"profissional_clinica\") at [390, 900]",
+              "[composition/proper-crossing] standard relationship id \"sessao-link_paciente_id\" (\"sessao\" -> \"link_paciente\") crosses relationship id \"flag_clinica-clinica_id\" (\"flag_clinica\" -> \"clinica\") at [583, 900]",
+              "[composition/proper-crossing] standard relationship id \"sessao-link_paciente_id\" (\"sessao\" -> \"link_paciente\") crosses relationship id \"desafio_encaminhador-profissional_id\" (\"desafio_encaminhador\" -> \"profissional\") at [772, 900]",
+              "[composition/proper-crossing] standard relationship id \"sessao-link_paciente_id\" (\"sessao\" -> \"link_paciente\") crosses relationship id \"anexo_encaminhamento-encaminhamento_id\" (\"anexo_encaminhamento\" -> \"encaminhamento\") at [1162, 900]",
+              "[composition/proper-crossing] standard relationship id \"sessao-desafio_id\" (\"sessao\" -> \"desafio_encaminhador\") crosses relationship id \"agendamento-clinica_id\" (\"agendamento\" -> \"profissional_clinica\") at [390, 1579.3]",
+              "[composition/proper-crossing] standard relationship id \"sessao-desafio_id\" (\"sessao\" -> \"desafio_encaminhador\") crosses relationship id \"flag_clinica-alterado_por\" (\"flag_clinica\" -> \"usuario\") at [386, 1140]",
+              "[composition/proper-crossing] standard relationship id \"horario_atendimento-clinica_id\" (\"horario_atendimento\" -> \"profissional_clinica\") crosses relationship id \"flag_clinica-clinica_id\" (\"flag_clinica\" -> \"clinica\") at [405, 724]",
+              "[composition/proper-crossing] standard relationship id \"vaga_encaminhamento-clinica_id\" (\"vaga_encaminhamento\" -> \"profissional_clinica\") crosses relationship id \"flag_clinica-clinica_id\" (\"flag_clinica\" -> \"clinica\") at [405, 748]",
+              "[composition/proper-crossing] standard relationship id \"vaga_encaminhamento-clinica_id\" (\"vaga_encaminhamento\" -> \"profissional_clinica\") crosses relationship id \"flag_clinica-alterado_por\" (\"flag_clinica\" -> \"usuario\") at [197, 1140]",
+              "[composition/proper-crossing] standard relationship id \"agendamento-clinica_id\" (\"agendamento\" -> \"profissional_clinica\") crosses relationship id \"flag_clinica-clinica_id\" (\"flag_clinica\" -> \"clinica\") at [405, 772]",
+              "[composition/proper-crossing] standard relationship id \"agendamento-clinica_id\" (\"agendamento\" -> \"profissional_clinica\") crosses relationship id \"flag_clinica-alterado_por\" (\"flag_clinica\" -> \"usuario\") at [390, 1140]",
+              "[composition/proper-crossing] standard relationship id \"agendamento-encaminhamento_id\" (\"agendamento\" -> \"encaminhamento\") crosses relationship id \"link_paciente-paciente_id\" (\"link_paciente\" -> \"paciente\") at [1544, 1075.3]",
+              "[composition/proper-crossing] standard relationship id \"agendamento-encaminhamento_id\" (\"agendamento\" -> \"encaminhamento\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [1544, 636]",
+              "[composition/proper-crossing] standard relationship id \"agendamento-encaminhamento_id\" (\"agendamento\" -> \"encaminhamento\") crosses relationship id \"envio_notificacao-link_paciente_id\" (\"envio_notificacao\" -> \"link_paciente\") at [1544, 1100]",
+              "[composition/proper-crossing] standard relationship id \"agendamento-encaminhamento_id\" (\"agendamento\" -> \"encaminhamento\") crosses relationship id \"envio_notificacao-desafio_id\" (\"envio_notificacao\" -> \"desafio_encaminhador\") at [1544, 1280]",
+              "[composition/proper-crossing] standard relationship id \"profissional-usuario_id\" (\"profissional\" -> \"usuario\") crosses relationship id \"profissional_clinica-clinica_id\" (\"profissional_clinica\" -> \"clinica\") at [394, 180]",
+              "[composition/proper-crossing] standard relationship id \"profissional-usuario_id\" (\"profissional\" -> \"usuario\") crosses relationship id \"flag_clinica-clinica_id\" (\"flag_clinica\" -> \"clinica\") at [434, 200]",
+              "[composition/proper-crossing] standard relationship id \"profissional-usuario_id\" (\"profissional\" -> \"usuario\") crosses relationship id \"contrarreferencia-clinica_id\" (\"contrarreferencia\" -> \"clinica\") at [394, 180]",
+              "[composition/proper-crossing] standard relationship id \"profissional-usuario_id\" (\"profissional\" -> \"usuario\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [394, 180]",
+              "[composition/proper-crossing] standard relationship id \"profissional_clinica-profissional_id\" (\"profissional_clinica\" -> \"profissional\") crosses relationship id \"contrarreferencia-clinica_id\" (\"contrarreferencia\" -> \"clinica\") at [595, 636]",
+              "[composition/proper-crossing] standard relationship id \"profissional_clinica-profissional_id\" (\"profissional_clinica\" -> \"profissional\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [595, 636]",
+              "[composition/proper-crossing] standard relationship id \"desafio_encaminhador-profissional_id\" (\"desafio_encaminhador\" -> \"profissional\") crosses relationship id \"contrarreferencia-clinica_id\" (\"contrarreferencia\" -> \"clinica\") at [772, 636]",
+              "[composition/proper-crossing] standard relationship id \"desafio_encaminhador-profissional_id\" (\"desafio_encaminhador\" -> \"profissional\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [772, 636]",
+              "[composition/proper-crossing] standard relationship id \"clinica_especialidade-clinica_id\" (\"clinica_especialidade\" -> \"clinica\") crosses relationship id \"profissional_especialidade-especialidade_id\" (\"profissional_especialidade\" -> \"especialidade\") at [780, 160]",
+              "[composition/proper-crossing] standard relationship id \"profissional_especialidade-especialidade_id\" (\"profissional_especialidade\" -> \"especialidade\") crosses relationship id \"encaminhamento-profissional_origem_id\" (\"encaminhamento\" -> \"profissional\") at [780, 600]",
+              "[composition/proper-crossing] standard relationship id \"profissional_especialidade-especialidade_id\" (\"profissional_especialidade\" -> \"especialidade\") crosses relationship id \"contrarreferencia-clinica_id\" (\"contrarreferencia\" -> \"clinica\") at [780, 636]",
+              "[composition/proper-crossing] standard relationship id \"profissional_especialidade-especialidade_id\" (\"profissional_especialidade\" -> \"especialidade\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [780, 636]",
+              "[composition/proper-crossing] standard relationship id \"anexo_encaminhamento-encaminhamento_id\" (\"anexo_encaminhamento\" -> \"encaminhamento\") crosses relationship id \"contrarreferencia-clinica_id\" (\"contrarreferencia\" -> \"clinica\") at [1162, 636]",
+              "[composition/proper-crossing] standard relationship id \"anexo_encaminhamento-encaminhamento_id\" (\"anexo_encaminhamento\" -> \"encaminhamento\") crosses relationship id \"contrarreferencia-autor_profissional_id\" (\"contrarreferencia\" -> \"profissional\") at [1162, 750]",
+              "[composition/proper-crossing] standard relationship id \"anexo_encaminhamento-encaminhamento_id\" (\"anexo_encaminhamento\" -> \"encaminhamento\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [1162, 636]",
+              "[composition/proper-crossing] standard relationship id \"contrarreferencia-encaminhamento_id\" (\"contrarreferencia\" -> \"encaminhamento\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [1544, 636]",
+              "[composition/proper-crossing] standard relationship id \"link_paciente-encaminhamento_id\" (\"link_paciente\" -> \"encaminhamento\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [1544, 636]",
+              "[composition/proper-crossing] standard relationship id \"link_paciente-paciente_id\" (\"link_paciente\" -> \"paciente\") crosses relationship id \"paciente_clinica-encaminhamento_id\" (\"paciente_clinica\" -> \"encaminhamento\") at [1548, 428]",
+              "[composition/proper-crossing] standard relationship id \"link_paciente-paciente_id\" (\"link_paciente\" -> \"paciente\") crosses relationship id \"consentimento-encaminhamento_id\" (\"consentimento\" -> \"encaminhamento\") at [1548, 790]",
+              "[composition/proper-crossing] standard relationship id \"link_paciente-paciente_id\" (\"link_paciente\" -> \"paciente\") crosses relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") at [1548, 636]",
+              "[composition/proper-crossing] standard relationship id \"link_paciente-paciente_id\" (\"link_paciente\" -> \"paciente\") crosses relationship id \"envio_notificacao-encaminhamento_id\" (\"envio_notificacao\" -> \"encaminhamento\") at [1544, 1075.3]",
+              "[composition/proper-crossing] standard relationship id \"paciente_clinica-encaminhamento_id\" (\"paciente_clinica\" -> \"encaminhamento\") crosses relationship id \"consentimento-paciente_id\" (\"consentimento\" -> \"paciente\") at [1552, 428]",
+              "[composition/proper-crossing] standard relationship id \"consentimento-clinica_id\" (\"consentimento\" -> \"clinica\") crosses relationship id \"envio_notificacao-encaminhamento_id\" (\"envio_notificacao\" -> \"encaminhamento\") at [1544, 636]"
+            ]
+          },
+          {
+            "name": "relationship_corridors",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "container_border_runs",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "route_rhythm",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "legend_clearance",
+            "ok": true,
+            "details": []
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "standard",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 55
+          },
+          "metrics": {
+            "properCrossings": 54,
+            "resolvedCrossovers": 0,
+            "ambiguousCorridors": 0,
+            "arrowheadCollisions": 0,
+            "containerBorderRuns": 0,
+            "labelRouteClearanceIssues": 0,
+            "labelCanvasOverflowIssues": 0,
+            "minLabelRouteClearance": null,
+            "desktopReadabilityIssues": 1,
+            "viewportHeightIssues": 0,
+            "minProjectedNodeTextPx": 4.33678756476684,
+            "maxBends": 4,
+            "routesOverSuggestedBends": 12,
+            "maxStretch": 1.417,
+            "routesOverSuggestedStretch": 1,
+            "minSegmentPx": 16,
+            "minInteriorSegmentPx": 29,
+            "shortSegmentCount": 0,
+            "shortEndpointSegmentCount": 0,
+            "shortInteriorSegmentCount": 0,
+            "microSegmentCount": 0
+          },
+          "suggestedLimits": {
+            "bendsPerRelationship": 2,
+            "stretch": 1.35,
+            "segmentPx": 16,
+            "microSegmentPx": 8
+          },
+          "routeReview": {
+            "crossings": [],
+            "detours": [
+              {
+                "relationship": {
+                  "id": "sessao-paciente_id",
+                  "from": "sessao",
+                  "to": "paciente",
+                  "label": "",
+                  "collectionIndex": 3,
+                  "artifactIndex": 4
+                },
+                "bends": 3,
+                "stretch": 1.022
+              },
+              {
+                "relationship": {
+                  "id": "sessao-desafio_id",
+                  "from": "sessao",
+                  "to": "desafio_encaminhador",
+                  "label": "",
+                  "collectionIndex": 6,
+                  "artifactIndex": 7
+                },
+                "bends": 3,
+                "stretch": 1.049
+              },
+              {
+                "relationship": {
+                  "id": "vaga_encaminhamento-clinica_id",
+                  "from": "vaga_encaminhamento",
+                  "to": "profissional_clinica",
+                  "label": "",
+                  "collectionIndex": 8,
+                  "artifactIndex": 9
+                },
+                "bends": 3,
+                "stretch": 1
+              },
+              {
+                "relationship": {
+                  "id": "flag_clinica-clinica_id",
+                  "from": "flag_clinica",
+                  "to": "clinica",
+                  "label": "",
+                  "collectionIndex": 17,
+                  "artifactIndex": 18
+                },
+                "bends": 4,
+                "stretch": 1.417,
+                "directCorridorBlockers": [
+                  {
+                    "id": "profissional",
+                    "label": "profissional",
+                    "box": [
+                      418,
+                      360,
+                      330,
+                      216
+                    ]
+                  },
+                  {
+                    "id": "profissional_clinica",
+                    "label": "profissional_clinica",
+                    "box": [
+                      418,
+                      660,
+                      330,
+                      176
+                    ]
+                  }
+                ]
+              },
+              {
+                "relationship": {
+                  "id": "flag_clinica-alterado_por",
+                  "from": "flag_clinica",
+                  "to": "usuario",
+                  "label": "",
+                  "collectionIndex": 18,
+                  "artifactIndex": 19
+                },
+                "bends": 3,
+                "stretch": 1.062
+              },
+              {
+                "relationship": {
+                  "id": "encaminhamento-profissional_origem_id",
+                  "from": "encaminhamento",
+                  "to": "profissional",
+                  "label": "",
+                  "collectionIndex": 25,
+                  "artifactIndex": 26
+                },
+                "bends": 3,
+                "stretch": 1.048
+              },
+              {
+                "relationship": {
+                  "id": "encaminhamento-clinica_destino_id",
+                  "from": "encaminhamento",
+                  "to": "clinica",
+                  "label": "",
+                  "collectionIndex": 28,
+                  "artifactIndex": 29
+                },
+                "bends": 4,
+                "stretch": 1.161
+              },
+              {
+                "relationship": {
+                  "id": "contrarreferencia-clinica_id",
+                  "from": "contrarreferencia",
+                  "to": "clinica",
+                  "label": "",
+                  "collectionIndex": 31,
+                  "artifactIndex": 32
+                },
+                "bends": 3,
+                "stretch": 1.032
+              },
+              {
+                "relationship": {
+                  "id": "paciente-cadastrado_por_clinica_id",
+                  "from": "paciente",
+                  "to": "clinica",
+                  "label": "",
+                  "collectionIndex": 35,
+                  "artifactIndex": 36
+                },
+                "bends": 4,
+                "stretch": 1.066
+              },
+              {
+                "relationship": {
+                  "id": "paciente_clinica-clinica_id",
+                  "from": "paciente_clinica",
+                  "to": "clinica",
+                  "label": "",
+                  "collectionIndex": 37,
+                  "artifactIndex": 38
+                },
+                "bends": 3,
+                "stretch": 1.056
+              },
+              {
+                "relationship": {
+                  "id": "consentimento-clinica_id",
+                  "from": "consentimento",
+                  "to": "clinica",
+                  "label": "",
+                  "collectionIndex": 41,
+                  "artifactIndex": 42
+                },
+                "bends": 3,
+                "stretch": 1.026
+              },
+              {
+                "relationship": {
+                  "id": "envio_notificacao-encaminhamento_id",
+                  "from": "envio_notificacao",
+                  "to": "encaminhamento",
+                  "label": "",
+                  "collectionIndex": 42,
+                  "artifactIndex": 43
+                },
+                "bends": 3,
+                "stretch": 1.036
+              }
+            ]
+          },
+          "leadingSpace": {
+            "measured": false,
+            "reviewSuggested": false
+          },
+          "desktopReadability": {
+            "budgetBasis": "legacy-930",
+            "readerContract": "declared-wide-v1",
+            "availableDiagramWidth": 930,
+            "actualBudgetPx": 930,
+            "limit": "legacy",
+            "requestedTargetPx": 7.5,
+            "requestedTargetMet": false,
+            "hardFloorPx": 6,
+            "hardFloorMet": false,
+            "minimumOwner": {
+              "kind": "node",
+              "id": "usuario"
+            },
+            "minimumSourceTextPx": 9,
+            "minimumProjectedTextPx": 4.33678756476684,
+            "semanticTextCount": 495
+          },
+          "issues": [
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "usuario_clinica-clinica_id",
+                "from": "usuario_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 1,
+                "artifactIndex": 2
+              },
+              "otherRelationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "point": [
+                394,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "point": [
+                394,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                583,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "point": [
+                772,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "point": [
+                1162,
+                940
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "point": [
+                1552,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "consentimento-encaminhamento_id",
+                "from": "consentimento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 40,
+                "artifactIndex": 41
+              },
+              "point": [
+                1552,
+                790
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-paciente_id",
+                "from": "sessao",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 3,
+                "artifactIndex": 4
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1552,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "profissional_clinica-clinica_id",
+                "from": "profissional_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-profissional_id",
+                "from": "sessao",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 4,
+                "artifactIndex": 5
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                394,
+                560
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "point": [
+                394,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "point": [
+                394,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                583,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "point": [
+                772,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-link_paciente_id",
+                "from": "sessao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 5,
+                "artifactIndex": 6
+              },
+              "otherRelationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "point": [
+                1162,
+                900
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-desafio_id",
+                "from": "sessao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "point": [
+                390,
+                1579.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "sessao-desafio_id",
+                "from": "sessao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 6,
+                "artifactIndex": 7
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                386,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "horario_atendimento-clinica_id",
+                "from": "horario_atendimento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 7,
+                "artifactIndex": 8
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                724
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                748
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "vaga_encaminhamento-clinica_id",
+                "from": "vaga_encaminhamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 8,
+                "artifactIndex": 9
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                197,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                405,
+                772
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-clinica_id",
+                "from": "agendamento",
+                "to": "profissional_clinica",
+                "label": "",
+                "collectionIndex": 9,
+                "artifactIndex": 10
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-alterado_por",
+                "from": "flag_clinica",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 18,
+                "artifactIndex": 19
+              },
+              "point": [
+                390,
+                1140
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "point": [
+                1544,
+                1075.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-link_paciente_id",
+                "from": "envio_notificacao",
+                "to": "link_paciente",
+                "label": "",
+                "collectionIndex": 44,
+                "artifactIndex": 45
+              },
+              "point": [
+                1544,
+                1100
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "agendamento-encaminhamento_id",
+                "from": "agendamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 11,
+                "artifactIndex": 12
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-desafio_id",
+                "from": "envio_notificacao",
+                "to": "desafio_encaminhador",
+                "label": "",
+                "collectionIndex": 45,
+                "artifactIndex": 46
+              },
+              "point": [
+                1544,
+                1280
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "profissional_clinica-clinica_id",
+                "from": "profissional_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 16,
+                "artifactIndex": 17
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "flag_clinica-clinica_id",
+                "from": "flag_clinica",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 17,
+                "artifactIndex": 18
+              },
+              "point": [
+                434,
+                200
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional-usuario_id",
+                "from": "profissional",
+                "to": "usuario",
+                "label": "",
+                "collectionIndex": 14,
+                "artifactIndex": 15
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                394,
+                180
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_clinica-profissional_id",
+                "from": "profissional_clinica",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                595,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_clinica-profissional_id",
+                "from": "profissional_clinica",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 15,
+                "artifactIndex": 16
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                595,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                772,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "desafio_encaminhador-profissional_id",
+                "from": "desafio_encaminhador",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 19,
+                "artifactIndex": 20
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                772,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "clinica_especialidade-clinica_id",
+                "from": "clinica_especialidade",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 20,
+                "artifactIndex": 21
+              },
+              "otherRelationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "point": [
+                780,
+                160
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "encaminhamento-profissional_origem_id",
+                "from": "encaminhamento",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 25,
+                "artifactIndex": 26
+              },
+              "point": [
+                780,
+                600
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                780,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "profissional_especialidade-especialidade_id",
+                "from": "profissional_especialidade",
+                "to": "especialidade",
+                "label": "",
+                "collectionIndex": 23,
+                "artifactIndex": 24
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                780,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-clinica_id",
+                "from": "contrarreferencia",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 31,
+                "artifactIndex": 32
+              },
+              "point": [
+                1162,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "contrarreferencia-autor_profissional_id",
+                "from": "contrarreferencia",
+                "to": "profissional",
+                "label": "",
+                "collectionIndex": 32,
+                "artifactIndex": 33
+              },
+              "point": [
+                1162,
+                750
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "anexo_encaminhamento-encaminhamento_id",
+                "from": "anexo_encaminhamento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 24,
+                "artifactIndex": 25
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1162,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "contrarreferencia-encaminhamento_id",
+                "from": "contrarreferencia",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 30,
+                "artifactIndex": 31
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-encaminhamento_id",
+                "from": "link_paciente",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 33,
+                "artifactIndex": 34
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "point": [
+                1548,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "consentimento-encaminhamento_id",
+                "from": "consentimento",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 40,
+                "artifactIndex": 41
+              },
+              "point": [
+                1548,
+                790
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "point": [
+                1548,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "link_paciente-paciente_id",
+                "from": "link_paciente",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 34,
+                "artifactIndex": 35
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-encaminhamento_id",
+                "from": "envio_notificacao",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 42,
+                "artifactIndex": 43
+              },
+              "point": [
+                1544,
+                1075.3
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "paciente_clinica-encaminhamento_id",
+                "from": "paciente_clinica",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 38,
+                "artifactIndex": 39
+              },
+              "otherRelationship": {
+                "id": "consentimento-paciente_id",
+                "from": "consentimento",
+                "to": "paciente",
+                "label": "",
+                "collectionIndex": 39,
+                "artifactIndex": 40
+              },
+              "point": [
+                1552,
+                428
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/proper-crossing",
+              "relationship": {
+                "id": "consentimento-clinica_id",
+                "from": "consentimento",
+                "to": "clinica",
+                "label": "",
+                "collectionIndex": 41,
+                "artifactIndex": 42
+              },
+              "otherRelationship": {
+                "id": "envio_notificacao-encaminhamento_id",
+                "from": "envio_notificacao",
+                "to": "encaminhamento",
+                "label": "",
+                "collectionIndex": 42,
+                "artifactIndex": 43
+              },
+              "point": [
+                1544,
+                636
+              ]
+            },
+            {
+              "severity": "warning",
+              "code": "composition/desktop-readability",
+              "nodeId": "usuario",
+              "owner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "viewportWidth": 1440,
+              "viewportHeight": 900,
+              "availableDiagramWidth": 930,
+              "budgetBasis": "legacy-930",
+              "readerContract": "declared-wide-v1",
+              "requestedTargetPx": 7.5,
+              "requestedTargetMet": false,
+              "budgetLimit": "legacy",
+              "viewBoxWidth": 1930,
+              "scale": 0.48186528497409326,
+              "text": "PK",
+              "detail": "context",
+              "sourceFontPx": 9,
+              "projectedFontPx": 4.33678756476684,
+              "minimumProjectedFontPx": 6
+            }
+          ]
+        },
+        "provenance": "current",
+        "deliveryReceiptId": "09bd40eb-2986-4f79-b04a-9ac81394b5b2"
+      }
+    },
+    "browser-check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 9084,
+      "command": [
+        "/opt/node22/bin/node",
+        "/home/claude/archify-src/repo/archify/bin/archify.mjs",
+        "browser-check",
+        "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+        "--json",
+        "--require-provenance"
+      ],
+      "execution": "in-process",
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "browser-check",
+        "evidenceKind": "automated-browser",
+        "status": "pass",
+        "visualReview": "not-requested",
+        "provenance": "current",
+        "deliveryReceiptId": "09bd40eb-2986-4f79-b04a-9ac81394b5b2",
+        "artifact": {
+          "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+          "sha256": "7c20bb14804d287fbf02953a8d0bd313b10e628e33b73287eca493f11070cb63",
+          "bytes": 997017
+        },
+        "state": {
+          "detail": "read",
+          "motion": "still"
+        },
+        "chrome": {
+          "status": "available",
+          "executable": "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome"
+        },
+        "diagnostics": [],
+        "containment": {
+          "status": "pass",
+          "policy": "fit-or-reader-declared-readable-vertical-scroll",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1547,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 1405,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 6.276683937823834,
+              "minimumProjectedNonEdgeTextPx": 6.276683937823834,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1780,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 1572,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.02279792746114,
+              "minimumProjectedNonEdgeTextPx": 7.02279792746114,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1887,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1639,
+              "diagramWidth": 1609,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 1679,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.503108808290156,
+              "minimumProjectedNonEdgeTextPx": 7.503108808290156,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1905,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1659,
+              "diagramWidth": 1609,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1679,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.503108808290156,
+              "minimumProjectedNonEdgeTextPx": 7.503108808290156,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "themeStates": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "light",
+              "resolvedTheme": "light",
+              "ok": true
+            },
+            {
+              "width": 1440,
+              "height": 900,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "requestedTheme": "dark",
+              "resolvedTheme": "dark",
+              "ok": true
+            }
+          ]
+        },
+        "readability": {
+          "status": "pass",
+          "minimumProjectedNodeTextPx": 6,
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1547,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 1405,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 6.276683937823834,
+              "minimumProjectedNonEdgeTextPx": 6.276683937823834,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1780,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 1572,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.02279792746114,
+              "minimumProjectedNonEdgeTextPx": 7.02279792746114,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1887,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1639,
+              "diagramWidth": 1609,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 1679,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.503108808290156,
+              "minimumProjectedNonEdgeTextPx": 7.503108808290156,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1905,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1659,
+              "diagramWidth": 1609,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1679,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.503108808290156,
+              "minimumProjectedNonEdgeTextPx": 7.503108808290156,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "viewerChrome": {
+          "status": "pass",
+          "viewports": [
+            {
+              "width": 1440,
+              "height": 900,
+              "theme": "light",
+              "innerWidth": 1440,
+              "innerHeight": 900,
+              "scrollWidth": 1440,
+              "scrollHeight": 1547,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1376,
+              "diagramWidth": 1346,
+              "pageComposition": {
+                "bodyPaddingPx": 12,
+                "headerPx": 52,
+                "diagramChromePx": 78,
+                "svgPx": 1405,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 6.276683937823834,
+              "minimumProjectedNonEdgeTextPx": 6.276683937823834,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1600,
+              "height": 1000,
+              "theme": "light",
+              "innerWidth": 1600,
+              "innerHeight": 1000,
+              "scrollWidth": 1600,
+              "scrollHeight": 1780,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1536,
+              "diagramWidth": 1506,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 1572,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.02279792746114,
+              "minimumProjectedNonEdgeTextPx": 7.02279792746114,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 1920,
+              "height": 1080,
+              "theme": "light",
+              "innerWidth": 1920,
+              "innerHeight": 1080,
+              "scrollWidth": 1920,
+              "scrollHeight": 1887,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1639,
+              "diagramWidth": 1609,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 60,
+                "diagramChromePx": 84,
+                "svgPx": 1679,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.503108808290156,
+              "minimumProjectedNonEdgeTextPx": 7.503108808290156,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 54,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            },
+            {
+              "width": 2048,
+              "height": 1320,
+              "theme": "light",
+              "innerWidth": 2048,
+              "innerHeight": 1320,
+              "scrollWidth": 2048,
+              "scrollHeight": 1905,
+              "overflowX": false,
+              "overflowY": true,
+              "verticalScrollAccepted": true,
+              "overflowDisposition": "readable-vertical-scroll",
+              "readerLayout": "adaptive",
+              "readerOverflow": "authored",
+              "readerFit": "intrinsic-height",
+              "ok": true,
+              "readerWidth": 1659,
+              "diagramWidth": 1609,
+              "pageComposition": {
+                "bodyPaddingPx": 64,
+                "headerPx": 68,
+                "diagramChromePx": 94,
+                "svgPx": 1679,
+                "cardsPx": 0,
+                "viewBoxHeight": 2014
+              },
+              "viewBoxWidth": 1930,
+              "minimumProjectedNodeTextPx": 7.503108808290156,
+              "minimumProjectedNonEdgeTextPx": 7.503108808290156,
+              "minimumProjectedEdgeTextPx": null,
+              "minimumProjectedNodeText": "PK",
+              "minimumProjectedNodeTextDetail": "context",
+              "minimumProjectedNodeTextOwner": {
+                "kind": "node",
+                "id": "usuario"
+              },
+              "minimumRequiredNodeTextPx": 6,
+              "readabilityOk": true,
+              "hasLegend": true,
+              "hasNavigationDock": true,
+              "legendDockIntersectionArea": 0,
+              "dockStageIntersectionArea": 0,
+              "dockStageGap": 10,
+              "requiredDockStageGap": 10,
+              "viewerChromeStageOk": true,
+              "viewerChromeReserve": 44,
+              "viewerChromeActive": true,
+              "viewerChromeOk": true,
+              "resolvedTheme": "light"
+            }
+          ]
+        },
+        "captures": {
+          "status": "not-requested",
+          "screenshots": [],
+          "contactSheet": null
+        },
+        "sidecars": {
+          "receipt": "erd-modelo-v2.browser-check.json",
+          "files": []
+        }
+      }
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.finalize.json",
+    "summaryReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.finalize-summary.json",
+    "browserCheckReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.browser-check.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-11-10T14:30:48.414Z",
+  "durationMs": 10715,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-10T12:48:45.621Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

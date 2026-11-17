@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "09bd40eb-2986-4f79-b04a-9ac81394b5b2",
+  "status": "current",
+  "command": "deliver",
+  "type": "erd",
+  "input": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.candidate.json",
+  "output": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+  "specification": {
+    "sha256": "6e49838c70c6ffeadbc7538c6505a00392b9a2313eceae496269cc9854447bbc",
+    "bytes": 67079
+  },
+  "artifact": {
+    "sha256": "7c20bb14804d287fbf02953a8d0bd313b10e628e33b73287eca493f11070cb63",
+    "bytes": 997017
+  }
+}

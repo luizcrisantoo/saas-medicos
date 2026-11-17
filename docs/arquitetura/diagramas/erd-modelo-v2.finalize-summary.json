@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "erd",
+  "quality": "standard",
+  "specification": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.candidate.json",
+    "sha256": "6e49838c70c6ffeadbc7538c6505a00392b9a2313eceae496269cc9854447bbc",
+    "bytes": 67079
+  },
+  "artifact": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.html",
+    "sha256": "7c20bb14804d287fbf02953a8d0bd313b10e628e33b73287eca493f11070cb63",
+    "bytes": 997017
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.finalize.json",
+    "summaryReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.finalize-summary.json",
+    "browserCheckReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/erd-modelo-v2.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-10T12:48:45.621Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 10715,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "routesOverSuggestedBends": 12,
+      "routesOverSuggestedStretch": 1
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [],
+      "detours": [
+        {
+          "relationship": {
+            "id": "sessao-paciente_id",
+            "from": "sessao",
+            "to": "paciente",
+            "label": "",
+            "collectionIndex": 3,
+            "artifactIndex": 4
+          },
+          "bends": 3,
+          "stretch": 1.022
+        },
+        {
+          "relationship": {
+            "id": "sessao-desafio_id",
+            "from": "sessao",
+            "to": "desafio_encaminhador",
+            "label": "",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "bends": 3,
+          "stretch": 1.049
+        },
+        {
+          "relationship": {
+            "id": "vaga_encaminhamento-clinica_id",
+            "from": "vaga_encaminhamento",
+            "to": "profissional_clinica",
+            "label": "",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "bends": 3,
+          "stretch": 1
+        },
+        {
+          "relationship": {
+            "id": "flag_clinica-clinica_id",
+            "from": "flag_clinica",
+            "to": "clinica",
+            "label": "",
+            "collectionIndex": 17,
+            "artifactIndex": 18
+          },
+          "bends": 4,
+          "stretch": 1.417,
+          "directCorridorBlockers": [
+            {
+              "id": "profissional",
+              "label": "profissional",
+              "box": [
+                418,
+                360,
+                330,
+                216
+              ]
+            },
+            {
+              "id": "profissional_clinica",
+              "label": "profissional_clinica",
+              "box": [
+                418,
+                660,
+                330,
+                176
+              ]
+            }
+          ]
+        },
+        {
+          "relationship": {
+            "id": "flag_clinica-alterado_por",
+            "from": "flag_clinica",
+            "to": "usuario",
+            "label": "",
+            "collectionIndex": 18,
+            "artifactIndex": 19
+          },
+          "bends": 3,
+          "stretch": 1.062
+        },
+        {
+          "relationship": {
+            "id": "encaminhamento-profissional_origem_id",
+            "from": "encaminhamento",
+            "to": "profissional",
+            "label": "",
+            "collectionIndex": 25,
+            "artifactIndex": 26
+          },
+          "bends": 3,
+          "stretch": 1.048
+        },
+        {
+          "relationship": {
+            "id": "encaminhamento-clinica_destino_id",
+            "from": "encaminhamento",
+            "to": "clinica",
+            "label": "",
+            "collectionIndex": 28,
+            "artifactIndex": 29
+          },
+          "bends": 4,
+          "stretch": 1.161
+        },
+        {
+          "relationship": {
+            "id": "contrarreferencia-clinica_id",
+            "from": "contrarreferencia",
+            "to": "clinica",
+            "label": "",
+            "collectionIndex": 31,
+            "artifactIndex": 32
+          },
+          "bends": 3,
+          "stretch": 1.032
+        }
+      ],
+      "truncated": true
+    },
+    "repair": "Advisory only: this mode places or routes these relationships itself. Report them; do not remove relationships or meaning to reduce crossings."
+  }
+}

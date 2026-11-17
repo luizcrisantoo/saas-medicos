@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "architecture",
+  "quality": "showcase",
+  "specification": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/arquitetura-v2.candidate.json",
+    "sha256": "826f301be2a0882ec13f4c3bed08dfed8da9f6ec9984d9f6e8e9f56826a0d814",
+    "bytes": 38781
+  },
+  "artifact": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/arquitetura-v2.html",
+    "sha256": "271fd86410489cd8fa902ce19ad5f883e346d185dd3e2dc9bdf759b64548154b",
+    "bytes": 882331
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/arquitetura-v2.finalize.json",
+    "summaryReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/arquitetura-v2.finalize-summary.json",
+    "browserCheckReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/arquitetura-v2.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-10T12:48:45.621Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 5700,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 4,
+      "routesOverSuggestedBends": 2
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "encaminhamentos-agenda",
+            "from": "encaminhamentos",
+            "to": "agenda",
+            "label": "confirmar horário",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "right": {
+            "id": "encaminhamentos-arquivos",
+            "from": "encaminhamentos",
+            "to": "arquivos",
+            "label": "anexos",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "point": [
+            675,
+            365.99999999999994
+          ],
+          "sharedNode": "encaminhamentos"
+        },
+        {
+          "left": {
+            "id": "agenda-outbox",
+            "from": "agenda",
+            "to": "outbox",
+            "label": "eventos da agenda",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "right": {
+            "id": "notificacoes-db",
+            "from": "notificacoes",
+            "to": "db",
+            "label": "só funções jobs_*",
+            "collectionIndex": 20,
+            "artifactIndex": 21
+          },
+          "point": [
+            805,
+            516
+          ]
+        },
+        {
+          "left": {
+            "id": "encaminhamentos-outbox",
+            "from": "encaminhamentos",
+            "to": "outbox",
+            "label": "eventos",
+            "collectionIndex": 10,
+            "artifactIndex": 11
+          },
+          "right": {
+            "id": "notificacoes-db",
+            "from": "notificacoes",
+            "to": "db",
+            "label": "só funções jobs_*",
+            "collectionIndex": 20,
+            "artifactIndex": 21
+          },
+          "point": [
+            691,
+            516
+          ]
+        },
+        {
+          "left": {
+            "id": "outbox-encaminhamentos",
+            "from": "outbox",
+            "to": "encaminhamentos",
+            "label": "consome da agenda",
+            "collectionIndex": 19,
+            "artifactIndex": 20
+          },
+          "right": {
+            "id": "notificacoes-db",
+            "from": "notificacoes",
+            "to": "db",
+            "label": "só funções jobs_*",
+            "collectionIndex": 20,
+            "artifactIndex": 21
+          },
+          "point": [
+            675,
+            516
+          ]
+        }
+      ],
+      "detours": [
+        {
+          "relationship": {
+            "id": "encaminhamentos-agenda",
+            "from": "encaminhamentos",
+            "to": "agenda",
+            "label": "confirmar horário",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "bends": 3,
+          "stretch": 1.238
+        },
+        {
+          "relationship": {
+            "id": "identidade-db",
+            "from": "identidade",
+            "to": "db",
+            "label": "sessão por hash",
+            "collectionIndex": 21,
+            "artifactIndex": 22
+          },
+          "bends": 3,
+          "stretch": 1.038
+        }
+      ],
+      "truncated": false
+    },
+    "hints": [
+      "encaminhamentos has 4 relationships facing its right side, which fits 3 ports: make that side at least 74px, or move some of those neighbours so they face another side of encaminhamentos.",
+      "db has 4 relationships facing its left side, which fits 3 ports: make that side at least 74px, or move some of those neighbours so they face another side of db.",
+      "encaminhamentos → agenda and encaminhamentos → arquivos cross next to encaminhamentos: move node agenda or arquivos so the two reach encaminhamentos from different sides (for example one level with it, one directly above or below it).",
+      "agenda → outbox crosses notificacoes → db: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "encaminhamentos → outbox crosses notificacoes → db: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "outbox → encaminhamentos crosses notificacoes → db: move the node of whichever is a branch, return, or second entrance to the other side of the main path, so that relationship runs through an empty corridor.",
+      "encaminhamentos → agenda needs 3 bends: move node encaminhamentos or agenda so they share a row or column with matching centers, or sit diagonally with a clear corner.",
+      "identidade → db needs 3 bends: move node identidade or db so they share a row or column with matching centers, or sit diagonally with a clear corner."
+    ],
+    "repair": "Trace these relationships at the desktop viewport. For Architecture, use references/architecture-layout-repair.md: reflow a blocked main path or tangled connected scene, and repair an isolated defect locally only when the surrounding composition is accepted. Preserve all semantic content and user-fixed geometry. Rerun finalize once after the edit."
+  }
+}

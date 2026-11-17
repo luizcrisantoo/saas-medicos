@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "10437f98-b600-4f7e-aa81-ed9854c274e2",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/home/claude/saas-agenda/docs/arquitetura/diagramas/arquitetura-v2.candidate.json",
+  "output": "/home/claude/saas-agenda/docs/arquitetura/diagramas/arquitetura-v2.html",
+  "specification": {
+    "sha256": "826f301be2a0882ec13f4c3bed08dfed8da9f6ec9984d9f6e8e9f56826a0d814",
+    "bytes": 38781
+  },
+  "artifact": {
+    "sha256": "271fd86410489cd8fa902ce19ad5f883e346d185dd3e2dc9bdf759b64548154b",
+    "bytes": 882331
+  }
+}

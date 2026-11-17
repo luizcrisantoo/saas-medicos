@@ -1,0 +1,421 @@
+# red-team-sondas-r1-novas contra o modelo r2 2026-11-10T14:25:59Z
+# versao: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+# unica diferenca da copia executada: socket/porta do psql dos \! (diff abaixo)
+5,8c5,8
+< -- socket em /home/claude/saas-agenda/.pgrt, autenticacao trust so neste cluster):
+< --   psql -h $PWD/.pgrt -p 5495 -U pgtest -d postgres -c 'create database rt'
+< --   psql -h $PWD/.pgrt -p 5495 -U pgtest -d rt -v ON_ERROR_STOP=1 -f docs/arquitetura/modelo-v2.sql
+< --   psql -h $PWD/.pgrt -p 5495 -U pgtest -d rt -f docs/seguranca/evidencias/red-team-sondas-r1-novas.sql
+---
+> -- socket em /home/claude/saas-agenda/.pgexec2, autenticacao trust so neste cluster):
+> --   psql -h $PWD/.pgrt -p 5494 -U pgtest -d postgres -c 'create database rt'
+> --   psql -h $PWD/.pgrt -p 5494 -U pgtest -d rt -v ON_ERROR_STOP=1 -f docs/arquitetura/modelo-v2.sql
+> --   psql -h $PWD/.pgrt -p 5494 -U pgtest -d rt -f docs/seguranca/evidencias/red-team-sondas-r1-novas.sql
+134c134
+< \! psql -h /home/claude/saas-agenda/.pgrt -p 5495 -U saas_app -d rt -qAtc "SELECT set_config('app.sessao','adadadadadadadadadadadadadadadadadadadadadadadadadadadadadadadad',false), pg_sleep(3)" >/dev/null 2>&1 &
+---
+> \! psql -h /home/claude/saas-agenda/.pgexec2 -p 5494 -U saas_app -d rt -qAtc "SELECT set_config('app.sessao','adadadadadadadadadadadadadadadadadadadadadadadadadadadadadadadad',false), pg_sleep(3)" >/dev/null 2>&1 &
+141c141
+< \! printf '%s\n' "SELECT set_config('app.sessao',\$1,false), pg_sleep(3) \bind adadadadadadadadadadadadadadadadadadadadadadadadadadadadadadadad \g" | psql -h /home/claude/saas-agenda/.pgrt -p 5495 -U saas_app -d rt -qAt >/dev/null 2>&1 &
+---
+> \! printf '%s\n' "SELECT set_config('app.sessao',\$1,false), pg_sleep(3) \bind adadadadadadadadadadadadadadadadadadadadadadadadadadadadadadadad \g" | psql -h /home/claude/saas-agenda/.pgexec2 -p 5494 -U saas_app -d rt -qAt >/dev/null 2>&1 &
+modelo-v2.sql exit=0
+Pager usage is off.
+================ SEMENTE (superusuario do cluster) ================
+
+================ N1. Catalogo: SECURITY DEFINER, search_path, PUBLIC ================
+N1a SECURITY DEFINER sem search_path fixo (esperado 0)
+ secdef_sem_search_path 
+------------------------
+                      0
+(1 row)
+
+N1b search_path das funcoes: public ou pg_temp antes de saas (esperado 0)
+ search_path_inseguro 
+----------------------
+                    0
+(1 row)
+
+N1c funcoes de QUALQUER schema executaveis por saas_app/saas_jobs/saas_auth alcancaveis (schema com USAGE), fora de pg_catalog/information_schema
+  rolname  | nspname | funcoes 
+-----------+---------+---------
+ saas_app  | saas    |      27
+ saas_auth | saas    |       1
+ saas_jobs | saas    |       8
+(3 rows)
+
+N1d privilegios de schema e banco dos papeis de login
+     r     | public_usage | public_create | saas_create | temp | db_create 
+-----------+--------------+---------------+-------------+------+-----------
+ saas_app  | f            | f             | f           | t    | f
+ saas_jobs | f            | f             | f           | t    | f
+ saas_auth | f            | f             | f           | t    | f
+(3 rows)
+
+N1e funcoes SECURITY DEFINER executaveis por saas_app que NAO exigem sessao (oraculo sem login?)
+              proname               
+------------------------------------
+ ator_encaminhamento
+ ator_id_efetivo
+ ator_paciente
+ ator_profissional
+ ator_tipo
+ ator_usuario
+ catalogo_rede
+ consentimento_ativo
+ destino_confirma_horario
+ eh_equipe
+ encaminhador_cadastra
+ encaminhador_confirma_codigo
+ encaminhador_pede_codigo
+ encaminhamento_cria
+ link_consulta
+ paciente_cadastra_na_clinica
+ paciente_confirma_codigo
+ paciente_pede_codigo
+ paciente_solicita
+ paciente_troca_telefone_presencial
+ papel_efetivo
+ pode_contrarreferenciar
+ rede_ligada
+ sessao_encerra
+ transicao_cancelamento
+(25 rows)
+
+N1f membros de papeis saas_* (esperado: nenhum papel de login herda ou assume outro)
+ membro | grupo 
+--------+-------
+(0 rows)
+
+N1g parametros que o papel web poderia usar para desligar gatilho (esperado: nenhum GRANT SET)
+ parname | paracl 
+---------+--------
+(0 rows)
+
+
+================ N2. Escalada saas_app -> outro papel ================
+N2a SET ROLE saas_funcoes (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:74: ERROR:  permission denied to set role "saas_funcoes"
+N2b SET ROLE saas_owner (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:76: ERROR:  permission denied to set role "saas_owner"
+N2c SET session_replication_role = replica (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:78: ERROR:  permission denied to set parameter "session_replication_role"
+N2d ler a tabela sessao (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:80: ERROR:  permission denied for table sessao
+N2e chamar sessao_valida() direto (esperado NEGADO: sem EXECUTE)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:82: ERROR:  permission denied for function sessao_valida
+N2f chamar funcao de gatilho direto (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:84: ERROR:  permission denied for function encaminhamento_apos_transicao
+N2g chamar funcao jobs_* pelo papel web (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:86: ERROR:  permission denied for function jobs_expirar_encaminhamentos
+N2h sombra em pg_temp: tabela temporaria "sessao" com sessao forjada, depois ator_tipo() (esperado NULL)
+    (se o CREATE acima falhou, o papel web nao tem TEMP; senao segue)
+ guc 
+-----
+ t
+(1 row)
+
+ n2h_ator_tipo_com_sessao_sombra 
+---------------------------------
+ NULL
+(1 row)
+
+N2i movida para depois da N6 (precisa de encaminhamento existente)
+
+================ N3. saas_auth: escopo e escalada ================
+N3a saas_auth le tabela (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:103: ERROR:  permission denied for function ator_usuario
+N3b saas_auth chama funcao web (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:105: ERROR:  permission denied for function link_consulta
+N3c saas_auth abre sessao de ADMIN so com o sub, sem prova OIDC (RESIDUAL do ADR-0023, objecao O1)
+ n3c_token_emitido_sem_prova 
+-----------------------------
+                          64
+(1 row)
+
+N3d sub inexistente (esperado erro generico)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:110: ERROR:  nao permitido
+CONTEXT:  PL/pgSQL function sessao_equipe_abre(text) line 4 at RAISE
+N3e token emitido pelo saas_auth usado pelo papel web como ADMIN de A (RESIDUAL: quem tem a credencial saas_auth vira qualquer usuario)
+                            set_config                            |              set_config              | set_config 
+------------------------------------------------------------------+--------------------------------------+------------
+ b7f0e8d303824f35aec026d19ad2127ac3543958b3364d43be97de7943c237ec | aaaaaaaa-0000-0000-0000-000000000001 | ADMIN
+(1 row)
+
+ n3e_usuarios_da_clinica_lidos_como_admin 
+------------------------------------------
+                                        2
+(1 row)
+
+
+================ N4. Sequestro de sessao ================
+N4a entropia: 2000 tokens de novo_token(): tamanho, distintos, nibbles fixos
+ min_len | max_len | distintos | nibble13_distintos | nibble45_distintos 
+---------+---------+-----------+--------------------+--------------------
+      64 |      64 |      2000 |                  1 |                  1
+(1 row)
+
+N4b token por chute: 1000 tokens aleatorios contra sessoes reais (esperado 0)
+ n4b_acertos 
+-------------
+           0
+(1 row)
+
+N4c token de sessao visivel a outra conexao do MESMO papel em pg_stat_activity
+    (vitima: conexao saas_app que grava o token com literal no SQL; atacante: injecao de SQL em outra conexao saas_app)
+ pg_sleep 
+----------
+ 
+(1 row)
+
+ n4c_literal | amostra 
+-------------+---------
+ NEGADO      | 
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+N4d mesma vitima, mas token como parametro ligado ($1, como o JDBC faz com PreparedStatement)
+ pg_sleep 
+----------
+ 
+(1 row)
+
+           n4d_bind            | amostra 
+-------------------------------+---------
+ NEGADO: so o texto do comando | 
+(1 row)
+
+ pg_sleep 
+----------
+ 
+(1 row)
+
+
+================ N5. Dono das tabelas (credencial de migracao) desliga gatilho e RLS ================
+ ?column? 
+----------
+ t
+(1 row)
+
+ historico_antes 
+-----------------
+               1
+(1 row)
+
+N5a dono tenta session_replication_role (esperado NEGADO)
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:163: ERROR:  permission denied to set parameter "session_replication_role"
+N5b dono desliga gatilhos e FORCE RLS do historico e apaga a trilha (ataque)
+ n5b_historico_depois_do_delete 
+--------------------------------
+                              0
+(1 row)
+
+N5c dono desliga o gatilho de colunas imutaveis e troca o motivo (ataque)
+ n5c_motivo_trocado 
+--------------------
+ ff
+(1 row)
+
+N5d sem rastro no banco: auditoria nao registra DDL (contagem de eventos de auditoria com acao ALTER*)
+ n5d_auditoria_de_ddl 
+----------------------
+                    0
+(1 row)
+
+
+================ N6. Deduplicacao por telefone funde pessoas diferentes (dado de saude na pessoa errada) ================
+N6a encaminhador: Maria e o filho Joao, mesmo telefone da familia, sem CPF
+ ?column? 
+----------
+ t
+(1 row)
+
+  n6a   | pacientes 
+--------+-----------
+ NEGADO |         2
+(1 row)
+
+N2i origem (sessao valida) forja saas.transicao=T2 e faz UPDATE direto CRIADO -> ENVIADO_AO_PACIENTE (esperado NEGADO)
+ ?column? 
+----------
+ t
+(1 row)
+
+ set_config 
+------------
+ T2
+(1 row)
+
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:195: ERROR:  transicao CRIADO -> ENVIADO_AO_PACIENTE recusada para este ator
+CONTEXT:  PL/pgSQL function encaminhamento_valida() line 24 at RAISE
+ n2i_status_continua 
+---------------------
+ CRIADO
+(1 row)
+
+N6b recepcao A cadastra Maria e depois Joao com o mesmo telefone, sem CPF
+                            set_config                            |              set_config              | set_config 
+------------------------------------------------------------------+--------------------------------------+------------
+ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | aaaaaaaa-0000-0000-0000-000000000001 | RECEPCAO
+(1 row)
+
+  n6b   | nome_gravado_para_pedro 
+--------+-------------------------
+ NEGADO | Pedro Souza (neto)
+(1 row)
+
+
+================ N7. Fluxo real do link + sessao de paciente com escopo de PESSOA, nao de caso ================
+ t2_ok 
+-------
+ t
+(1 row)
+
+ pediu 
+-------
+ t
+(1 row)
+
+ ?column? 
+----------
+ t
+(1 row)
+
+N7a sessao aberta pelo link do caso da MARIA le o caso do JOAO (esperado pelo desenho: so o caso do link)
+  n7a   | encaminhamentos_visiveis | urgencia_do_joao 
+--------+--------------------------+------------------
+ NEGADO |                        1 | 
+(1 row)
+
+
+================ N8. Credencial saas_jobs = chave mestra de toda identidade fora da equipe ================
+N8a atacante (sem sessao) pede codigo para o CRM publico da vitima pelo endpoint publico
+N8b com a credencial do worker, prepara o envio e recebe o codigo em claro
+ ?column? 
+----------
+ t
+(1 row)
+
+                          n8c                           | casos 
+--------------------------------------------------------+-------
+ RESIDUAL: casos da medica lidos com credencial de jobs |     3
+(1 row)
+
+
+================ N9. Cadastro de encaminhador: oraculo de CRM e envio em massa a telefone de terceiro ================
+N9a CRM existente (999/PE) e CRM novo: o efeito colateral (mensagem ao telefone informado) diferencia
+ tok1 
+------
+ t
+(1 row)
+
+ tok2 
+------
+ t
+(1 row)
+
+  crm   | mensagens_geradas_pelo_cadastro 
+--------+---------------------------------
+ 123456 |                               1
+ 999    |                               0
+(2 rows)
+
+N9b 30 CRMs inventados com o telefone de uma vitima: quantas mensagens saem (esperado: teto por telefone)
+ count 
+-------
+    30
+(1 row)
+
+                   n9b                    | mensagens_enfileiradas 
+------------------------------------------+------------------------
+ PASSOU: sem teto por telefone de destino |                     30
+(1 row)
+
+N9c o medico verdadeiro do CRM 123456/PE tenta se cadastrar depois do squatter (esperado: algum caminho)
+ tok 
+-----
+ t
+(1 row)
+
+                             n9c                             
+-------------------------------------------------------------
+ PASSOU: dono real bloqueado, nenhum codigo ao telefone dele
+(1 row)
+
+
+================ N10. Bloqueio permanente do paciente por quem tem o link ================
+ jobs_envio_resultado 
+----------------------
+ t
+(1 row)
+
+N10a quem recebeu o link encaminhado (grupo da familia) erra 10 vezes
+ sessoes_abertas 
+-----------------
+               0
+(1 row)
+
+N10b link reemitido e codigo certo: o paciente legitimo entra? (esperado pelo ADR-0030: nao; caminho de recuperacao: nenhum)
+ pediu 
+-------
+ t
+(1 row)
+
+                            n10b                            
+------------------------------------------------------------
+ PASSOU: paciente legitimo bloqueado para sempre neste caso
+(1 row)
+
+
+================ N11. Oraculos de funcoes SECURITY DEFINER sem sessao ================
+N11a rede_ligada(uuid) sem sessao nenhuma: responde por qualquer clinica
+ a | b 
+---+---
+ t | f
+(1 row)
+
+N11b consentimento_ativo e pode_contrarreferenciar sem sessao (esperado false)
+ c | p 
+---+---
+ f | f
+(1 row)
+
+N11c transicao_cancelamento com linha forjada pelo chamador (so devolve rotulo; esperado NULL sem sessao)
+ rotulo 
+--------
+ 
+(1 row)
+
+N11d sessao de PACIENTE lista o diretorio de medicos da rede (objecao O3)
+ ?column? 
+----------
+ t
+(1 row)
+
+ n11d_profissionais_visiveis_ao_paciente | nao_verificados 
+-----------------------------------------+-----------------
+                                      32 |              31
+(1 row)
+
+
+================ N12. Agenda: status livre para a equipe (entrada de T5) ================
+                            set_config                            |              set_config              | set_config 
+------------------------------------------------------------------+--------------------------------------+------------
+ aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | aaaaaaaa-0000-0000-0000-000000000001 | RECEPCAO
+(1 row)
+
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:332: ERROR:  agendamento REALIZADO e final
+CONTEXT:  PL/pgSQL function agendamento_marca_autor() line 6 at RAISE
+psql:/tmp/tmp.kLqjE4oKVi/novas.sql:333: ERROR:  current transaction is aborted, commands ignored until end of transaction block
+
+================ FIM ================
+red-team-sondas-r1-novas.sql exit=0
+## r2-6: alertas de DDL no log do servidor durante as sondas (N5b/N5c foram desfeitos por ROLLBACK)
+LOG:  ALERTA_DDL_SAAS: ALTER TABLE saas.historico_status_encaminhamento por session_user=pgtest current_user=saas_owner
+LOG:  ALERTA_DDL_SAAS: ALTER TABLE saas.historico_status_encaminhamento por session_user=pgtest current_user=saas_owner
+LOG:  ALERTA_DDL_SAAS: ALTER TABLE saas.encaminhamento por session_user=pgtest current_user=saas_owner
+LOG:  ALERTA_DDL_SAAS: ALTER TABLE saas.encaminhamento por session_user=pgtest current_user=saas_owner

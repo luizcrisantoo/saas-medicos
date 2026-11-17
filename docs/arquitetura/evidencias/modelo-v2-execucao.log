@@ -1,0 +1,726 @@
+# Execucao de docs/arquitetura/modelo-v2.sql em PostgreSQL 16 limpo, 2026-11-10T12:38:08Z
+# Comandos: initdb -D /tmp/claude-0/pg-exec/data; pg_ctl -o '-p 5499 -k /tmp/claude-0/pg-exec' start; createdb saas_v2; psql -v ON_ERROR_STOP=1 -e -f modelo-v2.sql
+PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+createdb saas_v2: ok
+CREATE ROLE saas_owner NOLOGIN NOSUPERUSER NOBYPASSRLS;
+CREATE ROLE
+CREATE ROLE saas_app LOGIN PASSWORD 'somente-ambiente-descartavel'
+  NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE NOINHERIT;
+CREATE ROLE
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+CREATE EXTENSION
+CREATE SCHEMA saas AUTHORIZATION saas_owner;
+CREATE SCHEMA
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
+REVOKE
+GRANT USAGE ON SCHEMA saas TO saas_app;
+GRANT
+SET ROLE saas_owner;
+SET
+SET search_path = saas, public;
+SET
+CREATE FUNCTION app_clinica_id() RETURNS uuid LANGUAGE sql STABLE AS
+$$ SELECT nullif(current_setting('app.clinica_id', true), '')::uuid $$;
+CREATE FUNCTION
+CREATE FUNCTION app_usuario() RETURNS uuid LANGUAGE sql STABLE AS
+$$ SELECT nullif(current_setting('app.usuario', true), '')::uuid $$;
+CREATE FUNCTION
+CREATE FUNCTION app_papel() RETURNS text LANGUAGE sql STABLE AS
+$$ SELECT nullif(current_setting('app.papel', true), '') $$;
+CREATE FUNCTION
+CREATE FUNCTION app_profissional_id() RETURNS uuid LANGUAGE sql STABLE AS
+$$ SELECT nullif(current_setting('app.profissional_id', true), '')::uuid $$;
+CREATE FUNCTION
+CREATE FUNCTION app_paciente_id() RETURNS uuid LANGUAGE sql STABLE AS
+$$ SELECT nullif(current_setting('app.paciente_id', true), '')::uuid $$;
+CREATE FUNCTION
+CREATE FUNCTION app_link_token_hash() RETURNS bytea LANGUAGE sql STABLE AS
+$$ SELECT decode(nullif(current_setting('app.link_token_hash', true), ''), 'hex') $$;
+CREATE FUNCTION
+CREATE TABLE usuario (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  sub_oidc    text NOT NULL UNIQUE,          -- "subject" do provedor OIDC (ADR provedor: Proposto)
+  nome        text NOT NULL,
+  email       text NOT NULL,
+  ativo       boolean NOT NULL DEFAULT true,
+  criado_em   timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+CREATE TABLE especialidade (
+  id    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome  text NOT NULL UNIQUE
+);
+CREATE TABLE
+CREATE TABLE clinica (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome               text NOT NULL,
+  cnpj               text,
+  modo_recebimento   text NOT NULL DEFAULT 'PEDIDO'
+                     CHECK (modo_recebimento IN ('PEDIDO','VAGAS','AGENDA_NATIVA')),
+  criado_em          timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+CREATE TABLE clinica_especialidade (
+  clinica_id        uuid NOT NULL REFERENCES clinica(id),
+  especialidade_id  uuid NOT NULL REFERENCES especialidade(id),
+  PRIMARY KEY (clinica_id, especialidade_id)
+);
+CREATE TABLE
+CREATE TABLE usuario_clinica (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  usuario_id  uuid NOT NULL REFERENCES usuario(id),
+  clinica_id  uuid NOT NULL REFERENCES clinica(id),
+  papel       text NOT NULL CHECK (papel IN ('ADMIN','RECEPCAO','MEDICO')),
+  ativo       boolean NOT NULL DEFAULT true,
+  criado_em   timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (usuario_id, clinica_id, papel)
+);
+CREATE TABLE
+CREATE TABLE flag_clinica (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinica_id   uuid NOT NULL REFERENCES clinica(id),
+  chave        text NOT NULL,
+  ligada       boolean NOT NULL DEFAULT false,
+  alterado_em  timestamptz NOT NULL DEFAULT now(),
+  alterado_por uuid REFERENCES usuario(id),
+  UNIQUE (clinica_id, chave)
+);
+CREATE TABLE
+CREATE TABLE profissional (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  crm         text NOT NULL,
+  crm_uf      char(2) NOT NULL,
+  nome        text NOT NULL,
+  telefone    text,           -- mascarar em log (briefing, Protecao de dados)
+  email       text,
+  usuario_id  uuid UNIQUE REFERENCES usuario(id),  -- nulo para quem encaminha sem conta
+  criado_em   timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (crm, crm_uf)        -- CRM e registro publico; checagem de unicidade ignora RLS
+);
+CREATE TABLE
+CREATE TABLE profissional_especialidade (
+  profissional_id   uuid NOT NULL REFERENCES profissional(id),
+  especialidade_id  uuid NOT NULL REFERENCES especialidade(id),
+  PRIMARY KEY (profissional_id, especialidade_id)
+);
+CREATE TABLE
+CREATE TABLE profissional_clinica (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  profissional_id       uuid NOT NULL REFERENCES profissional(id),
+  clinica_id            uuid NOT NULL REFERENCES clinica(id),
+  duracao_consulta_min  smallint NOT NULL DEFAULT 30 CHECK (duracao_consulta_min BETWEEN 5 AND 240),
+  recebe_encaminhamento boolean NOT NULL DEFAULT false,
+  ativo                 boolean NOT NULL DEFAULT true,
+  criado_em             timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (profissional_id, clinica_id),
+  UNIQUE (clinica_id, id)     -- alvo de FK composta: impede referencia entre tenants
+);
+CREATE TABLE
+CREATE TABLE horario_atendimento (
+  id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinica_id               uuid NOT NULL,
+  profissional_clinica_id  uuid NOT NULL,
+  dia_semana               smallint NOT NULL CHECK (dia_semana BETWEEN 0 AND 6),  -- 0 = domingo
+  hora_inicio              time NOT NULL,
+  hora_fim                 time NOT NULL,
+  CHECK (hora_fim > hora_inicio),
+  FOREIGN KEY (clinica_id, profissional_clinica_id) REFERENCES profissional_clinica(clinica_id, id)
+);
+CREATE TABLE
+CREATE TABLE paciente (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome             text NOT NULL,
+  telefone         text NOT NULL,     -- necessario para WhatsApp; mascarar em log
+  data_nascimento  date,
+  cpf_cifrado      bytea,             -- CIFRADO NA APLICACAO (briefing: CPF campo sensivel)
+  cpf_hash         bytea,             -- HMAC do CPF com chave de KMS, para localizar sem decifrar.
+                                      -- SEM UNIQUE de proposito: unicidade ignora RLS e viraria
+                                      -- oraculo "esse CPF existe na plataforma?" (Pesquisador, RLS).
+                                      -- Deduplicacao: pendente Red Team.
+  criado_em        timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+COMMENT ON COLUMN paciente.cpf_cifrado IS 'Cifrado pela aplicacao (envelope, chave no KMS). Nunca em texto claro no banco nem em log.';
+COMMENT
+COMMENT ON COLUMN paciente.cpf_hash IS 'HMAC com chave do KMS. Sem UNIQUE para nao criar canal oculto entre tenants.';
+COMMENT
+CREATE INDEX paciente_cpf_hash_idx ON paciente (cpf_hash);
+CREATE INDEX
+CREATE TABLE paciente_clinica (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  paciente_id  uuid NOT NULL REFERENCES paciente(id),
+  clinica_id   uuid NOT NULL REFERENCES clinica(id),
+  criado_em    timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (paciente_id, clinica_id)
+);
+CREATE TABLE
+CREATE TABLE encaminhamento (
+  id                        uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  profissional_origem_id    uuid NOT NULL REFERENCES profissional(id),
+  paciente_id               uuid NOT NULL REFERENCES paciente(id),
+  especialidade_destino_id  uuid NOT NULL REFERENCES especialidade(id),
+  clinica_destino_id        uuid REFERENCES clinica(id),
+  profissional_destino_id   uuid REFERENCES profissional(id),
+  motivo_cifrado            bytea NOT NULL,  -- CIFRADO NA APLICACAO (briefing: motivo campo sensivel)
+  urgencia                  text NOT NULL CHECK (urgencia IN ('ROTINA','PRIORITARIA','URGENTE')),
+  status                    text NOT NULL DEFAULT 'CRIADO'
+                            CHECK (status IN ('CRIADO','ENVIADO_AO_PACIENTE','SOLICITADO','AGENDADO',
+                                              'ATENDIDO','CONTRARREFERIDO','EXPIRADO','CANCELADO')),
+  expira_em                 timestamptz NOT NULL,
+  criado_em                 timestamptz NOT NULL DEFAULT now(),
+  atualizado_em             timestamptz NOT NULL DEFAULT now(),
+  CHECK (profissional_destino_id IS NULL OR clinica_destino_id IS NOT NULL)
+);
+CREATE TABLE
+COMMENT ON COLUMN encaminhamento.motivo_cifrado IS 'Cifrado pela aplicacao (envelope, chave no KMS). Nunca em evento, log ou mensagem de WhatsApp.';
+COMMENT
+CREATE INDEX encaminhamento_origem_idx  ON encaminhamento (profissional_origem_id);
+CREATE INDEX
+CREATE INDEX encaminhamento_destino_idx ON encaminhamento (clinica_destino_id);
+CREATE INDEX
+CREATE INDEX encaminhamento_paciente_idx ON encaminhamento (paciente_id);
+CREATE INDEX
+CREATE TABLE historico_status_encaminhamento (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  encaminhamento_id  uuid NOT NULL REFERENCES encaminhamento(id),
+  status_anterior    text,
+  status_novo        text NOT NULL,
+  autor_papel        text NOT NULL,   -- valor de app.papel no momento
+  autor_id           uuid,            -- usuario, profissional ou paciente; nulo se SISTEMA
+  alterado_em        timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+CREATE INDEX historico_enc_idx ON historico_status_encaminhamento (encaminhamento_id);
+CREATE INDEX
+CREATE TABLE consentimento (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  paciente_id        uuid NOT NULL REFERENCES paciente(id),
+  finalidade         text NOT NULL CHECK (finalidade IN ('AGENDAMENTO','COMPARTILHAR_CASO','COMUNICACAO_WHATSAPP')),
+  encaminhamento_id  uuid REFERENCES encaminhamento(id),
+  clinica_id         uuid REFERENCES clinica(id),
+  texto_aceito       text NOT NULL,          -- texto exato exibido ao paciente
+  versao_texto       text NOT NULL,
+  canal              text NOT NULL CHECK (canal IN ('WHATSAPP','SITE','RECEPCAO')),
+  aceito_em          timestamptz NOT NULL DEFAULT now(),
+  revogado_em        timestamptz,
+  CHECK (finalidade <> 'COMPARTILHAR_CASO' OR (encaminhamento_id IS NOT NULL AND clinica_id IS NOT NULL)),
+  CHECK (revogado_em IS NULL OR revogado_em >= aceito_em)
+);
+CREATE TABLE
+CREATE INDEX consentimento_enc_idx ON consentimento (encaminhamento_id);
+CREATE INDEX
+CREATE TABLE link_paciente (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  encaminhamento_id  uuid NOT NULL REFERENCES encaminhamento(id),
+  paciente_id        uuid NOT NULL REFERENCES paciente(id),
+  token_hash         bytea NOT NULL UNIQUE,   -- hash do token do link; o token nunca e gravado
+  expira_em          timestamptz NOT NULL,
+  usado_em           timestamptz,
+  codigo_hash        bytea,                   -- hash do codigo de uso unico enviado ao paciente
+  codigo_expira_em   timestamptz,
+  tentativas_codigo  smallint NOT NULL DEFAULT 0 CHECK (tentativas_codigo BETWEEN 0 AND 10),
+  criado_em          timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+CREATE TABLE vaga_encaminhamento (
+  id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinica_id               uuid NOT NULL,
+  profissional_clinica_id  uuid NOT NULL,
+  inicio                   timestamptz NOT NULL,
+  fim                      timestamptz NOT NULL,
+  liberar_automaticamente_em timestamptz,     -- liberacao automatica se ninguem usar
+  liberada_em              timestamptz,
+  CHECK (fim > inicio),
+  FOREIGN KEY (clinica_id, profissional_clinica_id) REFERENCES profissional_clinica(clinica_id, id),
+  UNIQUE (clinica_id, id)
+);
+CREATE TABLE
+CREATE TABLE agendamento (
+  id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  clinica_id               uuid NOT NULL,
+  profissional_clinica_id  uuid NOT NULL,
+  paciente_id              uuid NOT NULL REFERENCES paciente(id),
+  inicio                   timestamptz NOT NULL,
+  fim                      timestamptz NOT NULL,
+  origem                   text NOT NULL CHECK (origem IN ('SITE','WHATSAPP','RECEPCAO','ENCAMINHAMENTO')),
+  encaminhamento_id        uuid REFERENCES encaminhamento(id),
+  vaga_encaminhamento_id   uuid,
+  status                   text NOT NULL DEFAULT 'AGENDADO'
+                           CHECK (status IN ('AGENDADO','CONFIRMADO','REALIZADO','FALTOU','CANCELADO')),
+  chave_idempotencia       text NOT NULL,   -- clique duplo nao marca duas vezes (briefing, Seguranca da aplicacao)
+  criado_em                timestamptz NOT NULL DEFAULT now(),
+  CHECK (fim > inicio),
+  CHECK ((origem = 'ENCAMINHAMENTO') = (encaminhamento_id IS NOT NULL)),
+  FOREIGN KEY (clinica_id, profissional_clinica_id) REFERENCES profissional_clinica(clinica_id, id),
+  FOREIGN KEY (clinica_id, vaga_encaminhamento_id) REFERENCES vaga_encaminhamento(clinica_id, id),
+  UNIQUE (clinica_id, chave_idempotencia),
+  -- Dois agendamentos ativos do mesmo profissional na mesma clinica nao se sobrepoem.
+  EXCLUDE USING gist (profissional_clinica_id WITH =, tstzrange(inicio, fim) WITH &&)
+    WHERE (status <> 'CANCELADO')
+);
+CREATE TABLE
+CREATE INDEX agendamento_clinica_inicio_idx ON agendamento (clinica_id, inicio);
+CREATE INDEX
+CREATE TABLE contrarreferencia (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  encaminhamento_id     uuid NOT NULL REFERENCES encaminhamento(id),
+  clinica_id            uuid NOT NULL REFERENCES clinica(id),   -- clinica destino que atendeu
+  autor_profissional_id uuid NOT NULL REFERENCES profissional(id),
+  conduta_cifrada       bytea NOT NULL,   -- CIFRADO NA APLICACAO (briefing: conduta campo sensivel)
+  criado_em             timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE
+COMMENT ON COLUMN contrarreferencia.conduta_cifrada IS 'Cifrado pela aplicacao (envelope, chave no KMS). Nunca em evento, log ou WhatsApp.';
+COMMENT
+CREATE INDEX contrarreferencia_enc_idx ON contrarreferencia (encaminhamento_id);
+CREATE INDEX
+CREATE TABLE anexo_encaminhamento (
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  encaminhamento_id    uuid NOT NULL REFERENCES encaminhamento(id),
+  chave_storage        text NOT NULL UNIQUE,   -- chave opaca (UUID) no bucket; nunca o nome original
+  tipo_mime            text NOT NULL CHECK (tipo_mime IN ('application/pdf','image/jpeg','image/png')),
+  tamanho_bytes        bigint NOT NULL CHECK (tamanho_bytes > 0 AND tamanho_bytes <= 20971520),
+  sha256               bytea NOT NULL,
+  nome_original_cifrado bytea,                 -- nome do arquivo pode conter dado clinico
+  status_varredura     text NOT NULL DEFAULT 'PENDENTE' CHECK (status_varredura IN ('PENDENTE','LIMPO','INFECTADO')),
+  enviado_por_tipo     text NOT NULL CHECK (enviado_por_tipo IN ('PROFISSIONAL','PACIENTE')),
+  enviado_por_id       uuid NOT NULL,
+  criado_em            timestamptz NOT NULL DEFAULT now(),
+  reter_ate            timestamptz            -- PERGUNTA ABERTA: prazo de retencao (Pesquisador, Lei 13.787; advogado)
+);
+CREATE TABLE
+CREATE TABLE evento_auditoria (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  ocorrido_em   timestamptz NOT NULL DEFAULT now(),
+  ator_papel    text NOT NULL,
+  ator_id       uuid,             -- usuario, profissional ou paciente
+  clinica_id    uuid,             -- contexto de tenant, se houver
+  acao          text NOT NULL,    -- ex.: LER_ENCAMINHAMENTO, BAIXAR_ANEXO
+  recurso_tipo  text NOT NULL,
+  recurso_id    uuid,
+  ip_origem     inet,
+  canal         text              -- WEB, WHATSAPP, API
+  -- Sem texto livre de proposito: nada de dado pessoal ou clinico aqui.
+);
+CREATE TABLE
+CREATE INDEX evento_auditoria_clinica_idx ON evento_auditoria (clinica_id, ocorrido_em);
+CREATE INDEX
+CREATE FUNCTION bloqueia_alteracao() RETURNS trigger LANGUAGE plpgsql
+  SET search_path = saas, pg_temp AS
+$$ BEGIN
+  RAISE EXCEPTION 'tabela % e so de inclusao (%)', TG_TABLE_NAME, TG_OP;
+END $$;
+CREATE FUNCTION
+CREATE TRIGGER evento_auditoria_so_inclusao
+  BEFORE UPDATE OR DELETE ON evento_auditoria FOR EACH ROW EXECUTE FUNCTION bloqueia_alteracao();
+CREATE TRIGGER
+CREATE TRIGGER evento_auditoria_sem_truncate
+  BEFORE TRUNCATE ON evento_auditoria FOR EACH STATEMENT EXECUTE FUNCTION bloqueia_alteracao();
+CREATE TRIGGER
+CREATE TRIGGER historico_so_inclusao
+  BEFORE UPDATE OR DELETE ON historico_status_encaminhamento FOR EACH ROW EXECUTE FUNCTION bloqueia_alteracao();
+CREATE TRIGGER
+CREATE TRIGGER historico_sem_truncate
+  BEFORE TRUNCATE ON historico_status_encaminhamento FOR EACH STATEMENT EXECUTE FUNCTION bloqueia_alteracao();
+CREATE TRIGGER
+CREATE FUNCTION registra_historico_status() RETURNS trigger LANGUAGE plpgsql
+  SET search_path = saas, pg_temp AS
+$$ BEGIN
+  IF NEW.status IS DISTINCT FROM OLD.status THEN
+    INSERT INTO historico_status_encaminhamento
+      (encaminhamento_id, status_anterior, status_novo, autor_papel, autor_id)
+    VALUES
+      (NEW.id,
+       OLD.status,
+       NEW.status,
+       coalesce(app_papel(), 'DESCONHECIDO'),
+       coalesce(app_usuario(), app_profissional_id(), app_paciente_id()));
+    NEW.atualizado_em := now();
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE FUNCTION
+CREATE FUNCTION registra_historico_criacao() RETURNS trigger LANGUAGE plpgsql
+  SET search_path = saas, pg_temp AS
+$$ BEGIN
+  INSERT INTO historico_status_encaminhamento
+    (encaminhamento_id, status_anterior, status_novo, autor_papel, autor_id)
+  VALUES (NEW.id, NULL, NEW.status, coalesce(app_papel(), 'DESCONHECIDO'),
+          coalesce(app_usuario(), app_profissional_id(), app_paciente_id()));
+  RETURN NULL;
+END $$;
+CREATE FUNCTION
+CREATE TRIGGER encaminhamento_historico_criacao
+  AFTER INSERT ON encaminhamento FOR EACH ROW EXECUTE FUNCTION registra_historico_criacao();
+CREATE TRIGGER
+CREATE TRIGGER encaminhamento_historico_status
+  BEFORE UPDATE OF status ON encaminhamento FOR EACH ROW EXECUTE FUNCTION registra_historico_status();
+CREATE TRIGGER
+CREATE FUNCTION eh_equipe(papeis text[]) RETURNS boolean LANGUAGE sql STABLE
+  SET search_path = saas, pg_temp AS
+$$ SELECT app_clinica_id() IS NOT NULL
+      AND app_papel() = ANY (papeis)
+      AND EXISTS (SELECT 1 FROM usuario_clinica uc
+                   WHERE uc.usuario_id = app_usuario()
+                     AND uc.clinica_id = app_clinica_id()
+                     AND uc.papel = app_papel()
+                     AND uc.ativo) $$;
+CREATE FUNCTION
+ALTER TABLE usuario                          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE usuario                          FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE clinica                          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE clinica                          FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE clinica_especialidade            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE clinica_especialidade            FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE usuario_clinica                  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE usuario_clinica                  FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE flag_clinica                     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE flag_clinica                     FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE profissional                     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE profissional                     FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE profissional_especialidade       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE profissional_especialidade       FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE profissional_clinica             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE profissional_clinica             FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE horario_atendimento              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE horario_atendimento              FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE paciente                         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE paciente                         FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE paciente_clinica                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE paciente_clinica                 FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE encaminhamento                   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE encaminhamento                   FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE historico_status_encaminhamento  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE historico_status_encaminhamento  FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE consentimento                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE consentimento                    FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE link_paciente                    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE link_paciente                    FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE vaga_encaminhamento              ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE vaga_encaminhamento              FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE agendamento                      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE agendamento                      FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE contrarreferencia                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE contrarreferencia                FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE anexo_encaminhamento             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE anexo_encaminhamento             FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE evento_auditoria                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE
+ALTER TABLE evento_auditoria                 FORCE  ROW LEVEL SECURITY;
+ALTER TABLE
+CREATE POLICY usuario_proprio ON usuario FOR SELECT
+  USING (id = app_usuario());
+CREATE POLICY
+CREATE POLICY usuario_admin_da_clinica ON usuario FOR SELECT
+  USING (eh_equipe(ARRAY['ADMIN'])
+         AND EXISTS (SELECT 1 FROM usuario_clinica uc
+                      WHERE uc.usuario_id = usuario.id AND uc.clinica_id = app_clinica_id()));
+CREATE POLICY
+CREATE POLICY usuario_clinica_ver ON usuario_clinica FOR SELECT
+  USING (usuario_id = app_usuario()
+         OR (clinica_id = app_clinica_id() AND app_papel() = 'ADMIN'));
+CREATE POLICY
+CREATE POLICY clinica_equipe ON clinica FOR SELECT
+  USING (id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']));
+CREATE POLICY
+CREATE POLICY clinica_admin_altera ON clinica FOR UPDATE
+  USING (id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN']))
+  WITH CHECK (id = app_clinica_id());
+CREATE POLICY
+CREATE POLICY clinica_catalogo_rede ON clinica FOR SELECT
+  USING (app_papel() IN ('ENCAMINHADOR','PACIENTE'));
+CREATE POLICY
+CREATE POLICY clinica_especialidade_ver ON clinica_especialidade FOR SELECT
+  USING (clinica_id = app_clinica_id() OR app_papel() IN ('ENCAMINHADOR','PACIENTE'));
+CREATE POLICY
+CREATE POLICY clinica_especialidade_admin ON clinica_especialidade FOR INSERT
+  WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN']));
+CREATE POLICY
+CREATE POLICY flag_clinica_ver ON flag_clinica FOR SELECT
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']));
+CREATE POLICY
+CREATE POLICY profissional_ver ON profissional FOR SELECT
+  USING (app_papel() IS NOT NULL AND app_papel() <> 'PUBLICO_LINK');
+CREATE POLICY
+CREATE POLICY profissional_cadastra ON profissional FOR INSERT
+  WITH CHECK (eh_equipe(ARRAY['ADMIN','RECEPCAO']) OR app_papel() = 'ENCAMINHADOR');
+CREATE POLICY
+CREATE POLICY profissional_proprio_altera ON profissional FOR UPDATE
+  USING (id = app_profissional_id()) WITH CHECK (id = app_profissional_id());
+CREATE POLICY
+CREATE POLICY profissional_especialidade_ver ON profissional_especialidade FOR SELECT
+  USING (app_papel() IS NOT NULL AND app_papel() <> 'PUBLICO_LINK');
+CREATE POLICY
+CREATE POLICY profissional_clinica_equipe ON profissional_clinica FOR ALL
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']))
+  WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN']));
+CREATE POLICY
+CREATE POLICY horario_equipe ON horario_atendimento FOR ALL
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']))
+  WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO']));
+CREATE POLICY
+CREATE POLICY agendamento_equipe ON agendamento FOR ALL
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']))
+  WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']));
+CREATE POLICY
+CREATE POLICY agendamento_paciente_ver ON agendamento FOR SELECT
+  USING (app_papel() = 'PACIENTE' AND paciente_id = app_paciente_id());
+CREATE POLICY
+CREATE POLICY agendamento_paciente_marca ON agendamento FOR INSERT
+  WITH CHECK (app_papel() = 'PACIENTE' AND paciente_id = app_paciente_id()
+              AND origem IN ('SITE','WHATSAPP','ENCAMINHAMENTO'));
+CREATE POLICY
+CREATE POLICY vaga_equipe ON vaga_encaminhamento FOR ALL
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']))
+  WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO']));
+CREATE POLICY
+CREATE POLICY vaga_paciente_livre ON vaga_encaminhamento FOR SELECT
+  USING (app_papel() = 'PACIENTE' AND liberada_em IS NULL AND inicio > now());
+CREATE POLICY
+CREATE POLICY paciente_proprio ON paciente FOR SELECT
+  USING (app_papel() = 'PACIENTE' AND id = app_paciente_id());
+CREATE POLICY
+CREATE POLICY paciente_da_clinica ON paciente FOR SELECT
+  USING (eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO'])
+         AND EXISTS (SELECT 1 FROM paciente_clinica pc
+                      WHERE pc.paciente_id = paciente.id AND pc.clinica_id = app_clinica_id()));
+CREATE POLICY
+CREATE POLICY paciente_via_encaminhamento ON paciente FOR SELECT
+  USING (EXISTS (SELECT 1 FROM encaminhamento e WHERE e.paciente_id = paciente.id));
+CREATE POLICY
+CREATE POLICY paciente_cadastra ON paciente FOR INSERT
+  WITH CHECK (eh_equipe(ARRAY['ADMIN','RECEPCAO']) OR app_papel() = 'ENCAMINHADOR');
+CREATE POLICY
+CREATE POLICY paciente_altera ON paciente FOR UPDATE
+  USING ((app_papel() = 'PACIENTE' AND id = app_paciente_id())
+         OR (eh_equipe(ARRAY['ADMIN','RECEPCAO'])
+             AND EXISTS (SELECT 1 FROM paciente_clinica pc
+                          WHERE pc.paciente_id = paciente.id AND pc.clinica_id = app_clinica_id())));
+CREATE POLICY
+CREATE POLICY paciente_clinica_equipe ON paciente_clinica FOR ALL
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']))
+  WITH CHECK (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']));
+CREATE POLICY
+CREATE POLICY encaminhamento_origem ON encaminhamento FOR SELECT
+  USING (app_papel() IN ('ENCAMINHADOR','MEDICO')
+         AND profissional_origem_id = app_profissional_id());
+CREATE POLICY
+CREATE POLICY encaminhamento_paciente ON encaminhamento FOR SELECT
+  USING (app_papel() = 'PACIENTE' AND paciente_id = app_paciente_id());
+CREATE POLICY
+CREATE POLICY encaminhamento_destino ON encaminhamento FOR SELECT
+  USING (clinica_destino_id = app_clinica_id()
+         AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO'])
+         AND EXISTS (SELECT 1 FROM consentimento c
+                      WHERE c.encaminhamento_id = encaminhamento.id
+                        AND c.clinica_id = encaminhamento.clinica_destino_id
+                        AND c.finalidade = 'COMPARTILHAR_CASO'
+                        AND c.revogado_em IS NULL));
+CREATE POLICY
+CREATE POLICY encaminhamento_cria ON encaminhamento FOR INSERT
+  WITH CHECK (app_papel() IN ('ENCAMINHADOR','MEDICO')
+              AND profissional_origem_id = app_profissional_id()
+              AND status = 'CRIADO');
+CREATE POLICY
+CREATE POLICY encaminhamento_origem_altera ON encaminhamento FOR UPDATE
+  USING (app_papel() IN ('ENCAMINHADOR','MEDICO') AND profissional_origem_id = app_profissional_id())
+  WITH CHECK (profissional_origem_id = app_profissional_id());
+CREATE POLICY
+CREATE POLICY encaminhamento_paciente_altera ON encaminhamento FOR UPDATE
+  USING (app_papel() = 'PACIENTE' AND paciente_id = app_paciente_id())
+  WITH CHECK (paciente_id = app_paciente_id());
+CREATE POLICY
+CREATE POLICY encaminhamento_destino_altera ON encaminhamento FOR UPDATE
+  USING (clinica_destino_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO'])
+         AND EXISTS (SELECT 1 FROM consentimento c
+                      WHERE c.encaminhamento_id = encaminhamento.id
+                        AND c.clinica_id = encaminhamento.clinica_destino_id
+                        AND c.finalidade = 'COMPARTILHAR_CASO'
+                        AND c.revogado_em IS NULL))
+  WITH CHECK (clinica_destino_id = app_clinica_id());
+CREATE POLICY
+CREATE POLICY encaminhamento_sistema_expira ON encaminhamento FOR SELECT
+  USING (app_papel() = 'SISTEMA' AND expira_em < now()
+         AND status IN ('CRIADO','ENVIADO_AO_PACIENTE','SOLICITADO'));
+CREATE POLICY
+CREATE POLICY encaminhamento_sistema_expira_upd ON encaminhamento FOR UPDATE
+  USING (app_papel() = 'SISTEMA' AND expira_em < now()
+         AND status IN ('CRIADO','ENVIADO_AO_PACIENTE','SOLICITADO'))
+  WITH CHECK (status = 'EXPIRADO');
+CREATE POLICY
+CREATE POLICY historico_ver ON historico_status_encaminhamento FOR SELECT
+  USING (EXISTS (SELECT 1 FROM encaminhamento e WHERE e.id = encaminhamento_id));
+CREATE POLICY
+CREATE POLICY historico_inclui ON historico_status_encaminhamento FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM encaminhamento e WHERE e.id = encaminhamento_id));
+CREATE POLICY
+CREATE POLICY contrarreferencia_ver ON contrarreferencia FOR SELECT
+  USING (EXISTS (SELECT 1 FROM encaminhamento e WHERE e.id = encaminhamento_id));
+CREATE POLICY
+CREATE POLICY contrarreferencia_medico_destino ON contrarreferencia FOR INSERT
+  WITH CHECK (clinica_id = app_clinica_id()
+              AND eh_equipe(ARRAY['MEDICO'])
+              AND autor_profissional_id = app_profissional_id()
+              AND EXISTS (SELECT 1 FROM encaminhamento e
+                           WHERE e.id = encaminhamento_id AND e.clinica_destino_id = app_clinica_id()));
+CREATE POLICY
+CREATE POLICY anexo_ver ON anexo_encaminhamento FOR SELECT
+  USING (EXISTS (SELECT 1 FROM encaminhamento e WHERE e.id = encaminhamento_id));
+CREATE POLICY
+CREATE POLICY anexo_inclui ON anexo_encaminhamento FOR INSERT
+  WITH CHECK (EXISTS (SELECT 1 FROM encaminhamento e
+                       WHERE e.id = encaminhamento_id
+                         AND ((app_papel() IN ('ENCAMINHADOR','MEDICO') AND e.profissional_origem_id = app_profissional_id()
+                               AND enviado_por_tipo = 'PROFISSIONAL' AND enviado_por_id = app_profissional_id())
+                           OR (app_papel() = 'PACIENTE' AND e.paciente_id = app_paciente_id()
+                               AND enviado_por_tipo = 'PACIENTE' AND enviado_por_id = app_paciente_id()))));
+CREATE POLICY
+CREATE POLICY anexo_sistema_varredura ON anexo_encaminhamento FOR UPDATE
+  USING (app_papel() = 'SISTEMA' AND status_varredura = 'PENDENTE')
+  WITH CHECK (app_papel() = 'SISTEMA');
+CREATE POLICY
+CREATE POLICY anexo_sistema_ver ON anexo_encaminhamento FOR SELECT
+  USING (app_papel() = 'SISTEMA' AND status_varredura = 'PENDENTE');
+CREATE POLICY
+CREATE POLICY consentimento_paciente ON consentimento FOR SELECT
+  USING (app_papel() = 'PACIENTE' AND paciente_id = app_paciente_id());
+CREATE POLICY
+CREATE POLICY consentimento_clinica ON consentimento FOR SELECT
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN','RECEPCAO','MEDICO']));
+CREATE POLICY
+CREATE POLICY consentimento_paciente_concede ON consentimento FOR INSERT
+  WITH CHECK (app_papel() = 'PACIENTE' AND paciente_id = app_paciente_id() AND revogado_em IS NULL);
+CREATE POLICY
+CREATE POLICY consentimento_recepcao_registra ON consentimento FOR INSERT
+  WITH CHECK (eh_equipe(ARRAY['ADMIN','RECEPCAO']) AND clinica_id = app_clinica_id()
+              AND canal = 'RECEPCAO' AND finalidade <> 'COMPARTILHAR_CASO' AND revogado_em IS NULL);
+CREATE POLICY
+CREATE POLICY consentimento_paciente_revoga ON consentimento FOR UPDATE
+  USING (app_papel() = 'PACIENTE' AND paciente_id = app_paciente_id() AND revogado_em IS NULL)
+  WITH CHECK (paciente_id = app_paciente_id() AND revogado_em IS NOT NULL);
+CREATE POLICY
+CREATE POLICY link_publico ON link_paciente FOR SELECT
+  USING (app_papel() = 'PUBLICO_LINK' AND token_hash = app_link_token_hash()
+         AND expira_em > now() AND usado_em IS NULL);
+CREATE POLICY
+CREATE POLICY link_publico_usa ON link_paciente FOR UPDATE
+  USING (app_papel() = 'PUBLICO_LINK' AND token_hash = app_link_token_hash()
+         AND expira_em > now() AND usado_em IS NULL)
+  WITH CHECK (token_hash = app_link_token_hash());
+CREATE POLICY
+CREATE POLICY link_emite ON link_paciente FOR INSERT
+  WITH CHECK (app_papel() IN ('ENCAMINHADOR','MEDICO','SISTEMA')
+              AND EXISTS (SELECT 1 FROM encaminhamento e
+                           WHERE e.id = encaminhamento_id AND e.paciente_id = link_paciente.paciente_id));
+CREATE POLICY
+CREATE POLICY auditoria_inclui ON evento_auditoria FOR INSERT
+  WITH CHECK (app_papel() IS NOT NULL
+              AND (clinica_id IS NULL OR clinica_id = app_clinica_id()));
+CREATE POLICY
+CREATE POLICY auditoria_admin_ve ON evento_auditoria FOR SELECT
+  USING (clinica_id = app_clinica_id() AND eh_equipe(ARRAY['ADMIN']));
+CREATE POLICY
+GRANT SELECT ON especialidade TO saas_app;
+GRANT
+GRANT SELECT, INSERT, UPDATE ON
+  usuario, clinica, clinica_especialidade, usuario_clinica, flag_clinica,
+  profissional, profissional_especialidade, profissional_clinica, horario_atendimento,
+  paciente, paciente_clinica, encaminhamento, link_paciente, vaga_encaminhamento,
+  agendamento, contrarreferencia, anexo_encaminhamento
+  TO saas_app;
+GRANT
+GRANT SELECT, INSERT ON evento_auditoria, historico_status_encaminhamento TO saas_app;
+GRANT
+REVOKE UPDATE, DELETE, TRUNCATE ON evento_auditoria, historico_status_encaminhamento FROM saas_app;
+REVOKE
+GRANT SELECT, INSERT ON consentimento TO saas_app;
+GRANT
+GRANT UPDATE (revogado_em) ON consentimento TO saas_app;
+GRANT
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA saas TO saas_app;
+GRANT
+RESET ROLE;
+RESET
+ALTER ROLE saas_app SET search_path = saas;
+ALTER ROLE
+SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname IN ('saas_owner','saas_app') ORDER BY 1;
+  rolname   | rolsuper | rolbypassrls 
+------------+----------+--------------
+ saas_app   | f        | f
+ saas_owner | f        | f
+(2 rows)
+
+SELECT count(*) AS tabelas_do_saas_app FROM pg_tables WHERE tableowner = 'saas_app';
+ tabelas_do_saas_app 
+---------------------
+                   0
+(1 row)
+
+SELECT relname, relrowsecurity, relforcerowsecurity
+  FROM pg_class WHERE relnamespace = 'saas'::regnamespace AND relkind = 'r' ORDER BY relname;
+             relname             | relrowsecurity | relforcerowsecurity 
+---------------------------------+----------------+---------------------
+ agendamento                     | t              | t
+ anexo_encaminhamento            | t              | t
+ clinica                         | t              | t
+ clinica_especialidade           | t              | t
+ consentimento                   | t              | t
+ contrarreferencia               | t              | t
+ encaminhamento                  | t              | t
+ especialidade                   | f              | f
+ evento_auditoria                | t              | t
+ flag_clinica                    | t              | t
+ historico_status_encaminhamento | t              | t
+ horario_atendimento             | t              | t
+ link_paciente                   | t              | t
+ paciente                        | t              | t
+ paciente_clinica                | t              | t
+ profissional                    | t              | t
+ profissional_clinica            | t              | t
+ profissional_especialidade      | t              | t
+ usuario                         | t              | t
+ usuario_clinica                 | t              | t
+ vaga_encaminhamento             | t              | t
+(21 rows)
+
+psql exit code: 0
+# servidor desligado: pg_ctl stop -m fast (2026-11-10T12:38:32Z)
+# servidor desligado 2026-11-10T12:38:49Z por SIGINT (fast shutdown) no postmaster. O checkpoint final registrou PANIC de permissao porque o diretorio pai /tmp/claude-0 voltou para modo 700 durante a sessao; cluster descartavel, sem efeito sobre a execucao acima (psql exit code 0).

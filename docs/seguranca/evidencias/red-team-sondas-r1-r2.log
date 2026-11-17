@@ -1,0 +1,263 @@
+# red-team-sondas-r1 contra o modelo r2 2026-11-10T14:25:57Z
+# versao: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+modelo-v2.sql exit=0
+SET
+INSERT 0 2
+INSERT 0 2
+INSERT 0 2
+INSERT 0 2
+INSERT 0 4
+INSERT 0 2
+INSERT 0 1
+INSERT 0 2
+INSERT 0 2
+INSERT 0 1
+INSERT 0 2
+SET
+UPDATE 1
+SET
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 1
+INSERT 0 2
+INSERT 0 1
+INSERT 0 1
+CREATE SCHEMA
+CREATE TABLE
+GRANT
+GRANT
+GRANT
+CREATE FUNCTION
+GRANT
+======== SONDAS (saas_app e saas_jobs via SET LOCAL ROLE) ========
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+BEGIN
+SET
+ sonda 
+-------
+ 
+(1 row)
+
+ sonda 
+-------
+ 
+(1 row)
+
+COMMIT
+======== RESULTADO ========
+Output format is wrapped.
+Target width is 200.
+ n  |  id   |                                          descricao                                           |   papel   | veredito |                              resultado                              
+----+-------+----------------------------------------------------------------------------------------------+-----------+----------+---------------------------------------------------------------------
+  1 | RT1a  | recepcao A (sessao valida) vincula paciente de B por UUID                                    | saas_app  | NEGADO   | ERRO[42501]: permission denied for table paciente_clinica
+  2 | RT1b  | recepcao A (sessao valida) troca telefone de paciente de B por UPDATE                        | saas_app  | NEGADO   | ERRO[42501]: permission denied for table paciente
+  3 | RT1c  | recepcao A (sessao valida) troca telefone de paciente de B pela funcao presencial            | saas_app  | NEGADO   | ERRO[P0001]: nao permitido
+  4 | RT1d  | recepcao A (sessao valida): vinculo forjado com paciente de B nao existe apos a tentativa    | saas_app  | NEGADO   | 0
+  5 | RT2a  | PUBLICO_LINK (GUC, como na rodada 0) UPDATE no proprio link                                  | saas_app  | NEGADO   | ERRO[42501]: permission denied for table link_paciente
+  6 | RT2b  | com o token do link: 1 erro (soma 10) e o codigo certo deixa de abrir sessao                 | saas_app  | NEGADO   | 0
+  7 | RT3a  | saas_app declara SISTEMA e reescreve anexo                                                   | saas_app  | NEGADO   | ERRO[42501]: permission denied for table anexo_encaminhamento
+  8 | RT3b  | saas_app chama a funcao de varredura do worker                                               | saas_app  | NEGADO   | ERRO[42501]: permission denied for function jobs_anexo_varredura
+  9 | RT3c  | papel do worker (saas_jobs) reescreve anexo direto                                           | saas_jobs | NEGADO   | ERRO[42501]: permission denied for table anexo_encaminhamento
+ 10 | RT3d  | papel do worker: LIMPO e depois volta/troca para INFECTADO                                   | saas_jobs | NEGADO   | ERRO[P0001]: anexo inexistente ou ja varrido
+ 11 | RT4a  | PACIENTE so por GUC com paciente_id de B                                                     | saas_app  | NEGADO   | 0
+ 12 | RT4b  | PACIENTE C com sessao valida e GUC paciente_id de B: dados de B                              | saas_app  | NEGADO   | 0
+ 13 | RT5a  | ENCAMINHADOR so por GUC com profissional_id do encaminhador real                             | saas_app  | NEGADO   | 0
+ 14 | RT5b  | atacante com sessao valida de encaminhador e GUC do real                                     | saas_app  | NEGADO   | 0
+ 15 | RT5c  | atacante digita o CRM publico do real e tenta abrir sessao                                   | saas_app  | NEGADO   | 0
+ 16 | RT5d  | atacante recadastra o CRM do real pelo formulario                                            | saas_app  | NEGADO   | 0
+ 17 | RT6a  | ENCAMINHADOR so por GUC grava evento como ADMIN                                              | saas_app  | NEGADO   | ERRO[42501]: new row violates row-level security policy for table ".
+    |       |                                                                                              |           |          |.evento_auditoria"
+ 18 | RT6b  | ENCAMINHADOR com sessao valida grava evento como ADMIN                                       | saas_app  | NEGADO   | ERRO[42501]: new row violates row-level security policy for table ".
+    |       |                                                                                              |           |          |.evento_auditoria"
+ 19 | RT7a  | PACIENTE so por GUC insere agendamento                                                       | saas_app  | NEGADO   | ERRO[42501]: new row violates row-level security policy for table ".
+    |       |                                                                                              |           |          |.agendamento"
+ 20 | RT7b  | PACIENTE C com sessao valida insere agendamento para si                                      | saas_app  | NEGADO   | ERRO[42501]: new row violates row-level security policy for table ".
+    |       |                                                                                              |           |          |.agendamento"
+ 21 | RT8a  | MEDICO A (sessao valida) com GUC profissional_id de MedB assina como MedB                    | saas_app  | NEGADO   | ERRO[42501]: new row violates row-level security policy for table ".
+    |       |                                                                                              |           |          |.contrarreferencia"
+ 22 | RT8b  | MEDICO so por GUC (rodada 0) assina como MedB                                                | saas_app  | NEGADO   | ERRO[42501]: new row violates row-level security policy for table ".
+    |       |                                                                                              |           |          |.contrarreferencia"
+ 23 | RT9a  | ENCAMINHADOR (sessao valida) INSERT de CRM existente (esperado: erro de privilegio, nao de u.| saas_app  | NEGADO   | ERRO[42501]: new row violates row-level security policy for table ".
+    |       |.nicidade)                                                                                    |           |          |.profissional"
+ 24 | RT9b  | formulario com CRM existente x inexistente devolve o mesmo formato (64 hex), sem erro        | saas_app  | NEGADO   | 0
+ 25 | RT10a | PACIENTE so por GUC altera telefone                                                          | saas_app  | NEGADO   | ERRO[42501]: permission denied for table paciente
+ 26 | RT10b | PACIENTE C com sessao valida altera o proprio telefone                                       | saas_app  | NEGADO   | ERRO[42501]: permission denied for table paciente
+ 27 | CTRL1 | controle: recepcao A (sessao valida) ve E1, destino com consentimento                        | saas_app  | ABERTA   | 1
+ 28 | CTRL2 | controle: paciente C (sessao valida) ve o proprio encaminhamento                             | saas_app  | ABERTA   | 1
+(28 rows)
+
+ sondas_de_ataque | negadas | abertas | controles_positivos_ok 
+------------------+---------+---------+------------------------
+               26 |      26 |       0 |                      2
+(1 row)
+
+--- integridade: dados de partida intactos
+ telefone_pacb  | tentativas_link |     anexo      | contrarreferencias | agendamentos 
+----------------+-----------------+----------------+--------------------+--------------
+ +5581900000001 |               9 | obj-1/PENDENTE |                  0 |            0
+(1 row)
+
+red-team-sondas-r1.sql exit=0

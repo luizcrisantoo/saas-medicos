@@ -1,0 +1,448 @@
+# sondas-r2 2026-11-10T14:27:24Z
+# versao: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+modelo-v2.sql exit=0
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+ reg 
+-----
+ 
+(1 row)
+
+===== RESULTADO sondas-r2 =====
+ n  | item |  id   |                                                              descricao                                                               |   papel   |     esperado      |                                 obtido                                 |   r    
+----+------+-------+--------------------------------------------------------------------------------------------------------------------------------------+-----------+-------------------+------------------------------------------------------------------------+--------
+  1 | 4    | R2-4a | encaminhador: mae e filho com o mesmo telefone, sem CPF, viram 2 pacientes (N6a)                                                     | saas_app  | IGUAL:2           | 2                                                                      | PASSOU
+  2 | 4    | R2-4b | mesmo nome e telefone SEM data de nascimento: nao deduplica (2 pacientes)                                                            | saas_app  | IGUAL:2           | 2                                                                      | PASSOU
+  3 | 4    | R2-4c | mesmo nome, data e telefone com CPF diferente: 2 pacientes                                                                           | saas_app  | IGUAL:2           | 2                                                                      | PASSOU
+  4 | 4    | R2-4d | controle: nome normalizado + data + telefone iguais, sem CPF: mesma pessoa (fluxo do link sem CPF)                                   | saas_app  | IGUAL:1           | 1                                                                      | PASSOU
+  5 | 4    | R2-4e | controle: mesmo CPF com telefone novo: mesma pessoa                                                                                  | saas_app  | IGUAL:1           | 1                                                                      | PASSOU
+  6 | 4    | R2-4f | controle: encaminhamento sem CPF do paciente e aceito (idoso sem CPF no fluxo do link)                                               | saas_app  | POSITIVO          | 3ebc5b79-d693-480c-a38a-92998ab7c811                                   | PASSOU
+  7 | 4    | R2-4g | recepcao: avo e neto com o mesmo telefone recebem ids diferentes (N6b)                                                               | saas_app  | NEGADO            | false                                                                  | PASSOU
+  8 | 4    | R2-4h | recepcao: nome gravado para o neto e o dele                                                                                          | saas_app  | IGUAL:Pedro Souza | Pedro Souza                                                            | PASSOU
+  9 | 4    | R2-4i | controle recepcao: mesma pessoa (nome normalizado + data + telefone) reaproveita o cadastro                                          | saas_app  | IGUAL:true        | true                                                                   | PASSOU
+ 10 | 5    | R2-5a | controle: sessao do link do caso 1 ve o caso 1                                                                                       | saas_app  | IGUAL:1           | 1                                                                      | PASSOU
+ 11 | 5    | R2-5b | sessao do caso 1 le o caso 2 da MESMA pessoa (encaminhamento)                                                                        | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 12 | 5    | R2-5c | sessao do caso 1 le historico do caso 2                                                                                              | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 13 | 5    | R2-5d | sessao do caso 1 cancela o caso 2 (T10 fora do caso)                                                                                 | saas_app  | NEGADO            | OK n=0                                                                 | PASSOU
+ 14 | 5    | R2-5e | sessao do caso 1 escolhe destino e consente no caso 2 (T3 fora do caso)                                                              | saas_app  | NEGADO            | ERRO: nao permitido                                                    | PASSOU
+ 15 | 5    | R2-5f | sessao do caso 1 grava consentimento no caso 2 direto                                                                                | saas_app  | NEGADO            | OK n=0                                                                 | PASSOU
+ 16 | 5    | R2-5g | sessao do caso 1 anexa arquivo no caso 2                                                                                             | saas_app  | NEGADO            | ERRO: new row violates row-level security policy for table "anexo_enca | PASSOU
+ 17 | 5    | R2-5h | total de encaminhamentos visiveis a sessao do caso 1                                                                                 | saas_app  | IGUAL:1           | 1                                                                      | PASSOU
+ 18 | 5    | R2-5i | controle: T3 no proprio caso funciona                                                                                                | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 19 | 5    | R2-5j | depois do T3 do caso 1, consentimento visivel so do caso 1                                                                           | saas_app  | IGUAL:1           | 1                                                                      | PASSOU
+ 20 | 5    | R2-5k | sessao do caso 2 ve o caso 1 (simetria)                                                                                              | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 21 | 5    | R2-5l | sessao do caso 2 ve agendamento/consentimento do caso 1                                                                              | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 22 | 5    | R2-5m | controle: T3 do caso 2 na propria sessao                                                                                             | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 23 | 2    | R2-2a | controle: recepcao cancela agendamento ativo do caso 1                                                                               | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 24 | 2    | R2-2b | pre: T7 devolveu o caso 1 a SOLICITADO                                                                                               | saas_app  | IGUAL:SOLICITADO  | SOLICITADO                                                             | PASSOU
+ 25 | 2    | R2-2c | recepcao reativa agendamento CANCELADO -> AGENDADO (F2)                                                                              | saas_app  | ERRO              | ERRO: agendamento CANCELADO e final                                    | PASSOU
+ 26 | 2    | R2-2d | recepcao reativa CANCELADO -> CONFIRMADO                                                                                             | saas_app  | ERRO              | ERRO: agendamento CANCELADO e final                                    | PASSOU
+ 27 | 2    | R2-2e | recepcao muda horario de agendamento CANCELADO                                                                                       | saas_app  | ERRO              | ERRO: agendamento CANCELADO e final                                    | PASSOU
+ 28 | 2    | R2-2f | invariante: caso SOLICITADO sem agendamento ativo                                                                                    | saas_app  | IGUAL:0           | 0                                                                      | PASSOU
+ 29 | 2    | R2-2g | controle: AGENDADO -> CONFIRMADO no caso 2                                                                                           | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 30 | 2    | R2-2h | CONFIRMADO -> AGENDADO (volta)                                                                                                       | saas_app  | ERRO              | ERRO: agendamento CONFIRMADO nao volta a AGENDADO                      | PASSOU
+ 31 | 2    | R2-2i | controle: CONFIRMADO -> REALIZADO                                                                                                    | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 32 | 2    | R2-2j | pre: T5 levou o caso 2 a ATENDIDO                                                                                                    | saas_app  | IGUAL:ATENDIDO    | ATENDIDO                                                               | PASSOU
+ 33 | 2    | R2-2k | recepcao reabre REALIZADO -> AGENDADO depois de T5 (F2)                                                                              | saas_app  | ERRO              | ERRO: agendamento REALIZADO e final                                    | PASSOU
+ 34 | 2    | R2-2l | recepcao troca REALIZADO -> FALTOU (dispararia T7 indevido)                                                                          | saas_app  | ERRO              | ERRO: agendamento REALIZADO e final                                    | PASSOU
+ 35 | 2    | R2-2m | recepcao troca REALIZADO -> CANCELADO                                                                                                | saas_app  | ERRO              | ERRO: agendamento REALIZADO e final                                    | PASSOU
+ 36 | 2    | R2-2n | invariante: caso ATENDIDO sem agendamento ativo                                                                                      | saas_app  | IGUAL:0           | 0                                                                      | PASSOU
+ 37 | 2    | R2-2o | controle: agendamento comum AGENDADO -> FALTOU                                                                                       | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 38 | 2    | R2-2p | agendamento comum FALTOU -> AGENDADO                                                                                                 | saas_app  | ERRO              | ERRO: agendamento FALTOU e final                                       | PASSOU
+ 39 | 1    | R2-1a | controle: link do caso 2 valido antes do cancelamento                                                                                | saas_app  | IGUAL:1           | 1                                                                      | PASSOU
+ 40 | 1    | R2-1b | controle: origem cancela o caso 1 (T9, CRIADO)                                                                                       | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 41 | 1    | R2-1c | controle: origem cancela o caso 2 (T9, ENVIADO_AO_PACIENTE)                                                                          | saas_app  | POSITIVO          | OK n=1                                                                 | PASSOU
+ 42 | 1    | R2-1d | envio de link PENDENTE de caso CANCELADO: jobs_envio_prepara entrega token/telefone                                                  | saas_jobs | NEGADO            | ERRO: envio inexistente ou ja preparado                                | PASSOU
+ 43 | 1    | R2-1e | envio de CODIGO pedido antes do cancelamento: jobs_envio_prepara entrega codigo/telefone                                             | saas_jobs | NEGADO            | ERRO: envio inexistente ou ja preparado                                | PASSOU
+ 44 | 1    | R2-1f | jobs_envios_pendentes ainda lista envio de caso CANCELADO                                                                            | saas_jobs | NEGADO            | 0                                                                      | PASSOU
+ 45 | 1    | R2-1g | novo link para caso CANCELADO                                                                                                        | saas_jobs | ERRO              | ERRO: nao permitido                                                    | PASSOU
+ 46 | 1    | R2-1h | link nao usado de caso CANCELADO ainda valido em link_consulta (F1)                                                                  | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 47 | 1    | R2-1i | pedir codigo pelo link de caso CANCELADO                                                                                             | saas_app  | NEGADO            | false                                                                  | PASSOU
+ 48 | 1    | R2-1j | abrir sessao pelo link de caso CANCELADO (qualquer codigo)                                                                           | saas_app  | NEGADO            | NULL                                                                   | PASSOU
+ 49 | 1    | R2-1k | pre: T8 expirou o caso 3                                                                                                             | saas_app  | IGUAL:true        | true                                                                   | PASSOU
+ 50 | 1    | R2-1l | link de caso EXPIRADO ainda valido em link_consulta                                                                                  | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 51 | 1    | R2-1m | links ativos (nao usados nem revogados) de casos em estado final                                                                     | pgtest    | IGUAL:0           | 0                                                                      | PASSOU
+ 52 | 1    | R2-1n | envios PENDENTES de link/codigo de casos em estado final                                                                             | pgtest    | IGUAL:0           | 0                                                                      | PASSOU
+ 53 | 3    | R2-3a | controle: usuario ativo le profissional                                                                                              | saas_app  | POSITIVO          | 2                                                                      | PASSOU
+ 54 | 3    | R2-3b | controle: usuario ativo usa catalogo_rede                                                                                            | saas_app  | POSITIVO          | 1                                                                      | PASSOU
+ 55 | 3    | R2-3c | desativado le profissional (F3)                                                                                                      | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 56 | 3    | R2-3d | desativado le profissional_especialidade                                                                                             | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 57 | 3    | R2-3e | desativado usa catalogo_rede (F3)                                                                                                    | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 58 | 3    | R2-3f | desativado: ator_tipo()                                                                                                              | saas_app  | NEGADO            | NULL                                                                   | PASSOU
+ 59 | 3    | R2-3g | desativado le clinica, usuario, paciente, encaminhamento, agendamento, auditoria                                                     | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 60 | 3    | R2-3h | desativado cancela agendamento                                                                                                       | saas_app  | NEGADO            | OK n=0                                                                 | PASSOU
+ 61 | 3    | R2-3i | desativado cadastra paciente                                                                                                         | saas_app  | ERRO              | ERRO: nao permitido                                                    | PASSOU
+ 62 | 3    | R2-3j | desativado abre sessao nova pelo login                                                                                               | saas_auth | ERRO              | ERRO: nao permitido                                                    | PASSOU
+ 63 | 6    | R2-6a | controle: gatilhos de evento de alerta existem, ativos, donos superusuario                                                           | pgtest    | IGUAL:2           | 2                                                                      | PASSOU
+ 64 | 6    | R2-6b | (como saas_owner) dono das tabelas desliga o alerta (ALTER EVENT TRIGGER ... DISABLE)                                                | pgtest    | ERRO              | ERRO: must be owner of event trigger saas_alerta_ddl_fim               | PASSOU
+ 65 | 6    | R2-6c | (como saas_owner) dono das tabelas apaga o alerta (DROP EVENT TRIGGER)                                                               | pgtest    | ERRO              | ERRO: must be owner of event trigger saas_alerta_ddl_drop              | PASSOU
+ 66 | 6    | R2-6d | (como saas_owner) RESIDUAL documentado (ADR-0027): dono desliga gatilho do historico; o comando passa e fica no log (ver fim do log) | pgtest    | OK                | OK n=0                                                                 | PASSOU
+ 67 | 7    | R2-7a | controle: track_activities=off e log_parameter_max_length=0 nos 3 papeis de login                                                    | pgtest    | IGUAL:3           | 3                                                                      | PASSOU
+ 68 | 7    | R2-7b | papel web religa track_activities                                                                                                    | saas_app  | ERRO              | ERRO: permission denied to set parameter "track_activities"            | PASSOU
+ 69 | 7    | R2-7c | outra conexao saas_app le o token literal em pg_stat_activity (N4c)                                                                  | saas_app  | NEGADO            | 0                                                                      | PASSOU
+ 70 | 7    | R2-7d | outra conexao saas_app ve o texto de qualquer comando da vitima                                                                      | saas_app  | NEGADO            | 0                                                                      | PASSOU
+(70 rows)
+
+===== RESUMO POR ITEM =====
+ item | total | passou | falhou | ataques | ataques_negados 
+------+-------+--------+--------+---------+-----------------
+ 1    |    14 |     14 |      0 |       8 |               8
+ 2    |    16 |     16 |      0 |       8 |               8
+ 3    |    10 |     10 |      0 |       8 |               8
+ 4    |     9 |      9 |      0 |       1 |               1
+ 5    |    13 |     13 |      0 |       8 |               8
+ 6    |     4 |      4 |      0 |       2 |               2
+ 7    |     4 |      4 |      0 |       3 |               3
+(7 rows)
+
+ total | passou | falhou 
+-------+--------+--------
+    70 |     70 |      0
+(1 row)
+
+sondas-r2.sql exit=0
+## log do servidor: alertas de DDL (r2-6)
+LOG:  ALERTA_DDL_SAAS: ALTER TABLE saas.historico_status_encaminhamento por session_user=pgtest current_user=saas_owner

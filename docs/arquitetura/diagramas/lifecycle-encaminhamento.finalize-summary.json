@@ -1,0 +1,132 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "lifecycle",
+  "quality": "showcase",
+  "specification": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/lifecycle-encaminhamento.candidate.json",
+    "sha256": "df3a7bb14b5fdbe87f05bdfbeda85ee9442eada9ca872d804b885316c34a4574",
+    "bytes": 35095
+  },
+  "artifact": {
+    "path": "/home/claude/saas-agenda/docs/arquitetura/diagramas/lifecycle-encaminhamento.html",
+    "sha256": "d3116e115d540c8119a2641c39dcc3bbb11810a7e3f814f55b59326ecba2fe1b",
+    "bytes": 851445
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "pass"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/lifecycle-encaminhamento.finalize.json",
+    "summaryReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/lifecycle-encaminhamento.finalize-summary.json",
+    "browserCheckReceipt": "/home/claude/saas-agenda/docs/arquitetura/diagramas/lifecycle-encaminhamento.browser-check.json"
+  },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.2.0",
+    "availableVersion": "3.2.0",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-10T12:48:45.621Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
+  "visualReview": "not-requested",
+  "durationMs": 4267,
+  "browserCheck": {
+    "requested": true,
+    "ran": true
+  },
+  "visualReviewRecommendation": {
+    "action": "inspect-route-readability",
+    "signals": {
+      "resolvedCrossovers": 3
+    },
+    "reason": "Automated gates passed, but crossings or detours still need perceptual review before claiming visual quality.",
+    "affectedRoutes": {
+      "crossings": [
+        {
+          "left": {
+            "id": "t8a",
+            "from": "criado",
+            "to": "expirado",
+            "label": "T8 prazo vencido",
+            "collectionIndex": 6,
+            "artifactIndex": 7
+          },
+          "right": {
+            "id": "t9a",
+            "from": "criado",
+            "to": "cancelado",
+            "label": "T9 a T11 cancelar",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "point": [
+            358.50000000000006,
+            168
+          ],
+          "sharedNode": "criado"
+        },
+        {
+          "left": {
+            "id": "t8b",
+            "from": "enviado",
+            "to": "expirado",
+            "label": "T8 prazo vencido",
+            "collectionIndex": 7,
+            "artifactIndex": 8
+          },
+          "right": {
+            "id": "t9a",
+            "from": "criado",
+            "to": "cancelado",
+            "label": "T9 a T11 cancelar",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "point": [
+            358.50000000000006,
+            168
+          ]
+        },
+        {
+          "left": {
+            "id": "t8c",
+            "from": "solicitado",
+            "to": "expirado",
+            "label": "T8 prazo vencido",
+            "collectionIndex": 8,
+            "artifactIndex": 9
+          },
+          "right": {
+            "id": "t9a",
+            "from": "criado",
+            "to": "cancelado",
+            "label": "T9 a T11 cancelar",
+            "collectionIndex": 9,
+            "artifactIndex": 10
+          },
+          "point": [
+            358.50000000000006,
+            168
+          ]
+        }
+      ],
+      "detours": [],
+      "truncated": false
+    },
+    "repair": "Advisory only: this mode places or routes these relationships itself. Report them; do not remove relationships or meaning to reduce crossings."
+  }
+}

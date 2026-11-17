@@ -1,0 +1,290 @@
+# red-team-sondas-r2 2026-11-10T14:38:35Z
+# versao: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+# cluster novo: /home/claude/saas-agenda/.pgrt2 porta 5492, usuario de SO pgtest (nao-root), auth trust local
+# comandos: create database r2; psql -v ON_ERROR_STOP=1 -f docs/arquitetura/modelo-v2.sql; psql -f docs/seguranca/evidencias/red-team-sondas-r2.sql
+modelo-v2.sql exit=0
+Pager usage is off.
+================ SEMENTE (superusuario do cluster) ================
+
+================ R2N1. T-18 por outro caminho: CPF do responsavel (ADR-0036, item 2a) ================
+  Cenario: formulario aceita "CPF do paciente ou responsavel" [SUPOSICAO: pratica comum para menor sem CPF].
+  Origem 1 encaminha a mae com o CPF dela; depois o filho, com outro nome, outra data e o MESMO CPF.
+ sessao_origem1 
+----------------
+ t
+(1 row)
+
+R2N1a filho e mae com o mesmo CPF e nome e nascimento diferentes (esperado: 2 pacientes)
+                r2n1a                 | pacientes | nome_do_paciente_no_caso_do_davi | nascimento_no_caso_do_davi 
+--------------------------------------+-----------+----------------------------------+----------------------------
+ PASSOU: caso do filho gravado na mae |         1 | Lucia Ramos                      | 1984-02-02
+(1 row)
+
+R2N1b controle (ADR-0036 2b): mesmo nome normalizado, data e telefone, sem CPF, mesmo encaminhador (esperado: 1)
+    r2n1b    | pacientes 
+-------------+-----------
+ CONTROLE ok |         1
+(1 row)
+
+R2N1c outro encaminhador digita os mesmos nome, data, telefone e CPF da Lucia (esperado: registro novo, escopo do ADR-0029)
+ sessao_origem2 
+----------------
+ t
+(1 row)
+
+ r2n1c  | pacientes 
+--------+-----------
+ NEGADO |         2
+(1 row)
+
+
+================ R2N2. Telefone informado descartado quando o CPF casa (link vai ao numero antigo) ================
+ sessao_origem1 
+----------------
+ t
+(1 row)
+
+  Meses depois a Rita troca de numero; o medico digita o numero NOVO e o mesmo CPF
+R2N2a numero para onde vai o link do caso novo (esperado: o numero digitado agora, +5581977773333)
+                              r2n2a                              | contato_usado  
+-----------------------------------------------------------------+----------------
+ PASSOU: link e codigo vao ao numero antigo, sem aviso ao medico | +5581900002222
+(1 row)
+
+
+================ R2N3. Recepcao: casamento por CPF devolve outra pessoa em silencio ================
+ ?column? | ?column? | set_config 
+----------+----------+------------
+ t        | t        | RECEPCAO
+(1 row)
+
+R2N3a cadastro de outra pessoa (nome, data, telefone diferentes) com CPF igual por digitacao ou CPF de responsavel
+                        r2n3a                        | nome_do_registro_devolvido_para_ana 
+-----------------------------------------------------+-------------------------------------
+ PASSOU: devolveu o id do Jose sem sinal de conflito | Jose Alves
+(1 row)
+
+
+================ R2N4. Sessao por caso com telefone da familia: o caso do filho por outros caminhos ================
+ sessao_origem1 
+----------------
+ t
+(1 row)
+
+ t2_maria 
+----------
+ t
+(1 row)
+
+ pediu_m 
+---------
+ t
+(1 row)
+
+ t2_joao 
+---------
+ t
+(1 row)
+
+ pediu_j 
+---------
+ t
+(1 row)
+
+ mesmo_telefone_recebe_os_dois_links 
+-------------------------------------
+ t
+(1 row)
+
+  Joao escolhe a clinica B (T3) e anexa um exame; recepcao B confirma horario (T4)
+ ?column? 
+----------
+ t
+(1 row)
+
+ t3_joao_sem_erro 
+------------------
+ t
+(1 row)
+
+ ?column? | ?column? | set_config 
+----------+----------+------------
+ t        | t        | RECEPCAO
+(1 row)
+
+R2N4 sessao da MARIA (mesmo aparelho) contra cada caminho ate o caso do JOAO (esperado: 0 em todos)
+ ?column? 
+----------
+ t
+(1 row)
+
+ r2n4a_encaminhamento | r2n4b_paciente_via_caso | r2n4c_pacientes_visiveis_total | r2n4d_historico | r2n4e_anexo | r2n4f_agendamento | r2n4g_consentimento | r2n4h_contrarreferencia 
+----------------------+-------------------------+--------------------------------+-----------------+-------------+-------------------+---------------------+-------------------------
+                    0 |                       0 |                              1 |               0 |           0 |                 0 |                   0 |                       0
+(1 row)
+
+R2N4i sessao da Maria cancela o caso do Joao por UPDATE direto (esperado: 0 linhas)
+    linhas afetadas: 0
+R2N4j sessao da Maria revoga o consentimento do Joao (esperado: 0 linhas)
+    linhas afetadas: 0
+R2N4k sessao da Maria grava consentimento no caso do Joao (esperado: erro)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:177: ERROR:  new row violates row-level security policy for table "consentimento"
+R2N4l sessao da Maria grava auditoria em nome do Joao (esperado: erro)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:180: ERROR:  new row violates row-level security policy for table "evento_auditoria"
+R2N4m controle: a sessao da Maria ve o proprio caso
+ r2n4m_controle_proprio_caso 
+-----------------------------
+                           1
+(1 row)
+
+
+================ R2N5. Duplicata como canal: vinculo de encaminhamento depois da revogacao ================
+  Joao revoga o COMPARTILHAR_CASO da clinica B (paciente_clinica nascido do encaminhamento continua)
+ ?column? 
+----------
+ t
+(1 row)
+
+    revogacoes: 1
+ ?column? | ?column? | set_config 
+----------+----------+------------
+ t        | t        | RECEPCAO
+(1 row)
+
+R2N5a recepcao B le o cadastro do Joao depois da revogacao (esperado: 0, I-03)
+ r2n5a_paciente_lido 
+---------------------
+                   0
+(1 row)
+
+R2N5b recepcao B "cadastra" Joao com nome, data e telefone: recebe o id do registro revogado? (esperado: registro novo)
+                    r2n5b                    
+---------------------------------------------
+ PASSOU: oraculo e reuso do vinculo revogado
+(1 row)
+
+R2N5c com o id devolvido, recepcao B marca consulta fora do encaminhamento (esperado: negado)
+    linhas inseridas: 1
+R2N5d recepcao B registra consentimento de WhatsApp em nome dele (esperado: negado)
+    linhas inseridas: 1
+R2N5e e continua sem conseguir ler o cadastro que acabou de "criar" (incoerencia)
+ r2n5e_paciente_lido 
+---------------------
+                   0
+(1 row)
+
+
+================ R2N6. Paciente nascido de encaminhamento: quem corrige telefone ou nome errado ================
+ ?column? | ?column? | set_config 
+----------+----------+------------
+ t        | t        | RECEPCAO
+(1 row)
+
+R2N6a recepcao B troca telefone do Joao (nasceu de encaminhamento; esperado: negado, O2 pendente da Fase 3)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:219: ERROR:  nao permitido
+CONTEXT:  PL/pgSQL function paciente_troca_telefone_presencial(uuid,text) line 4 at RAISE
+
+================ R2N7. I-20: o papel web religa o rastreio de comando ================
+R2N7a SET track_activities = on (esperado: negado)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:227: ERROR:  permission denied to set parameter "track_activities"
+R2N7b SET log_statement = all (esperado: negado)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:229: ERROR:  permission denied to set parameter "log_statement"
+R2N7c SET log_min_duration_statement = 0 (esperado: negado)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:231: ERROR:  permission denied to set parameter "log_min_duration_statement"
+R2N7d SET log_parameter_max_length = -1 (esperado: negado)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:233: ERROR:  permission denied to set parameter "log_parameter_max_length"
+R2N7e ALTER ROLE saas_app SET track_activities = on (esperado: negado)
+psql:/home/claude/saas-agenda/docs/seguranca/evidencias/red-team-sondas-r2.sql:235: ERROR:  permission denied to set parameter "track_activities"
+R2N7f valores efetivos na conexao do papel web
+ track_activities | lpml | lpml_err 
+------------------+------+----------
+ off              | 0    | 0
+(1 row)
+
+  R2N7g (opcao de arranque PGOPTIONS) no fim do log, executada pelo runner
+
+================ R2N9. R-07: alerta de DDL cobre politica e gatilho? ================
+  Cada passo como saas_owner, com marca no log do servidor; o runner anexa o log entre as marcas.
+R2N9a efeito: papel web SEM sessao le encaminhamentos depois da politica aberta do dono
+ r2n9a_encaminhamentos_sem_sessao 
+----------------------------------
+                                8
+(1 row)
+
+R2N9g o que pg_event_trigger_ddl_commands informa como schema de politica e gatilho (causa)
+      tag       |  tipo   | esquema |          ident          
+----------------+---------+---------+-------------------------
+ ALTER TABLE    | table   | saas    | saas.paciente
+ CREATE POLICY  | policy  | (nulo)  | r2n9_x on saas.paciente
+ CREATE TRIGGER | trigger | (nulo)  | r2n9_y on saas.paciente
+(3 rows)
+
+
+================ FIM DO SQL (anexos do runner abaixo) ================
+red-team-sondas-r2.sql exit=0
+
+================ R2N7g opcao de arranque: PGOPTIONS='-c track_activities=on' como saas_app (esperado: negado) ================
+psql: error: connection to server on socket "/home/claude/saas-agenda/.pgrt2/.s.PGSQL.5492" failed: FATAL:  permission denied to set parameter "track_activities"
+
+================ R2N9 log do servidor entre as marcas (ALERTA_DDL_SAAS = alerta emitido) ================
+LOG:  MARCA_R2N9a inicio: CREATE POLICY aberta
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9a inicio: CREATE POLICY aberta'; END $$;
+LOG:  MARCA_R2N9a fim
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9a fim'; END $$;
+LOG:  MARCA_R2N9b inicio: ALTER POLICY encaminhamento_paciente USING (true)
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9b inicio: ALTER POLICY encaminhamento_paciente USING (true)'; END $$;
+LOG:  MARCA_R2N9b fim
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9b fim'; END $$;
+LOG:  MARCA_R2N9c inicio: DROP POLICY
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9c inicio: DROP POLICY'; END $$;
+LOG:  ALERTA_DDL_SAAS: DROP policy r2n9_aberta on saas.encaminhamento por session_user=pgtest current_user=saas_owner
+LOG:  MARCA_R2N9c fim
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9c fim'; END $$;
+LOG:  MARCA_R2N9d inicio: DROP TRIGGER historico_so_inclusao
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9d inicio: DROP TRIGGER historico_so_inclusao'; END $$;
+LOG:  ALERTA_DDL_SAAS: DROP trigger historico_so_inclusao on saas.historico_status_encaminhamento por session_user=pgtest current_user=saas_owner
+LOG:  MARCA_R2N9d fim
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9d fim'; END $$;
+LOG:  MARCA_R2N9e inicio: CREATE TRIGGER que zera motivo
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9e inicio: CREATE TRIGGER que zera motivo'; END $$;
+LOG:  ALERTA_DDL_SAAS: CREATE FUNCTION saas.r2n9_f() por session_user=pgtest current_user=saas_owner
+LOG:  MARCA_R2N9e fim
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9e fim'; END $$;
+LOG:  MARCA_R2N9f inicio: controle ALTER TABLE DISABLE TRIGGER
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9f inicio: controle ALTER TABLE DISABLE TRIGGER'; END $$;
+LOG:  ALERTA_DDL_SAAS: ALTER TABLE saas.historico_status_encaminhamento por session_user=pgtest current_user=saas_owner
+LOG:  MARCA_R2N9f fim
+STATEMENT:  DO $$ BEGIN RAISE LOG 'MARCA_R2N9f fim'; END $$;
+LOG:  ALERTA_DDL_SAAS: ALTER TABLE saas.paciente por session_user=pgtest current_user=saas_owner
+
+================ Runner usado (copia integral) ================
+#!/usr/bin/env bash
+# Runner do Red Team r2: cluster novo .pgrt2:5492, usuario de SO pgtest.
+set -u
+RAIZ=/home/claude/saas-agenda
+PGBIN=/usr/lib/postgresql/16/bin
+DIR=$RAIZ/.pgrt2; PORTA=5492
+SEG=$RAIZ/docs/seguranca/evidencias
+LOG=$SEG/red-team-sondas-r2.log
+PS="psql -X -h $DIR -p $PORTA"
+[ -f "$DIR/data/postmaster.pid" ] && runuser -u pgtest -- $PGBIN/pg_ctl -D "$DIR/data" -m fast -w stop >/dev/null 2>&1
+rm -rf "$DIR"; mkdir -p "$DIR"; chown pgtest:pgtest "$DIR"; chmod 700 "$DIR"
+runuser -u pgtest -- $PGBIN/initdb -D "$DIR/data" -U pgtest --auth=trust -E UTF8 --locale=C.UTF-8 >/dev/null || exit 1
+runuser -u pgtest -- $PGBIN/pg_ctl -D "$DIR/data" -w -l "$DIR/pg.log" -o "-p $PORTA -k $DIR -c listen_addresses=''" start >/dev/null || exit 1
+{
+echo "# red-team-sondas-r2 $(date -u +%FT%TZ)"
+echo "# versao: $($PS -U pgtest -d postgres -Atc 'select version()')"
+echo "# cluster novo: $DIR porta $PORTA, usuario de SO pgtest (nao-root), auth trust local"
+echo "# comandos: create database r2; psql -v ON_ERROR_STOP=1 -f docs/arquitetura/modelo-v2.sql; psql -f docs/seguranca/evidencias/red-team-sondas-r2.sql"
+$PS -U pgtest -d postgres -qc 'create database r2'
+$PS -U pgtest -d r2 -v ON_ERROR_STOP=1 -q -f $RAIZ/docs/arquitetura/modelo-v2.sql >/dev/null 2>&1; echo "modelo-v2.sql exit=$?"
+$PS -U pgtest -d r2 -f $SEG/red-team-sondas-r2.sql 2>&1; echo "red-team-sondas-r2.sql exit=$?"
+echo ""
+echo "================ R2N7g opcao de arranque: PGOPTIONS='-c track_activities=on' como saas_app (esperado: negado) ================"
+PGOPTIONS='-c track_activities=on' $PS -U saas_app -d r2 -Atc "show track_activities" 2>&1
+echo ""
+echo "================ R2N9 log do servidor entre as marcas (ALERTA_DDL_SAAS = alerta emitido) ================"
+grep -E "MARCA_R2N9|ALERTA_DDL_SAAS" "$DIR/pg.log" | sed -E 's/^[0-9-]+ [0-9:.]+ [A-Z]+ \[[0-9]+\] //' | grep -v CONTEXT
+} > "$LOG" 2>&1
+runuser -u pgtest -- $PGBIN/pg_ctl -D "$DIR/data" -m fast -w stop >/dev/null 2>&1
+echo feito

@@ -1,0 +1,58 @@
+# modelo-v2-execucao-r1 2026-11-10T13:41:32Z
+# comando: psql -X -v ON_ERROR_STOP=1 -q -f docs/arquitetura/modelo-v2.sql (PostgreSQL 16 limpo, superusuario pgtest, porta 5497)
+# versao: PostgreSQL 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0, 64-bit
+   rolname    | rolsuper | rolbypassrls | rolcanlogin 
+--------------+----------+--------------+-------------
+ saas_app     | f        | f            | t
+ saas_auth    | f        | f            | t
+ saas_funcoes | f        | t            | f
+ saas_jobs    | f        | f            | t
+ saas_owner   | f        | f            | f
+(5 rows)
+
+ tabelas_de_papel_de_login 
+---------------------------
+                         0
+(1 row)
+
+             relname             | relrowsecurity | relforcerowsecurity 
+---------------------------------+----------------+---------------------
+ agendamento                     | t              | t
+ anexo_encaminhamento            | t              | t
+ clinica                         | t              | t
+ clinica_especialidade           | t              | t
+ consentimento                   | t              | t
+ contrarreferencia               | t              | t
+ desafio_encaminhador            | t              | t
+ encaminhamento                  | t              | t
+ envio_notificacao               | t              | t
+ especialidade                   | f              | f
+ evento_auditoria                | t              | t
+ flag_clinica                    | t              | t
+ historico_status_encaminhamento | t              | t
+ horario_atendimento             | t              | t
+ link_paciente                   | t              | t
+ paciente                        | t              | t
+ paciente_clinica                | t              | t
+ profissional                    | t              | t
+ profissional_clinica            | t              | t
+ profissional_especialidade      | t              | t
+ sessao                          | t              | t
+ usuario                         | t              | t
+ usuario_clinica                 | t              | t
+ vaga_encaminhamento             | t              | t
+(24 rows)
+
+  rolname  | funcoes_executaveis 
+-----------+---------------------
+ saas_app  |                  26
+ saas_auth |                   1
+ saas_jobs |                   8
+(3 rows)
+
+ funcoes_executaveis_por_public 
+--------------------------------
+                              0
+(1 row)
+
+modelo-v2.sql exit=0
