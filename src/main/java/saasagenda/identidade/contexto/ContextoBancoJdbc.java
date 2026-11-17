@@ -130,6 +130,11 @@ class ContextoBancoJdbc implements ContextoBanco {
         }
 
         @Override
+        public int update(String sql, Object... parametros) {
+            return executa(() -> jdbc.update(sql, parametros));
+        }
+
+        @Override
         public String tipoAtor() {
             return executa(() -> jdbc.queryForObject(ATOR, String.class));
         }

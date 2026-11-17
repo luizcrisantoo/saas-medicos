@@ -195,7 +195,7 @@ class ContextoArquiteturaTest {
      * pelo nome do parâmetro e pela contagem; a origem do texto passa pela regra de chamada.
      */
     static final Map<String, Map<String, Integer>> REPASSES = Map.of(
-            GRAVADOR, Map.of("sql", 2),
+            GRAVADOR, Map.of("sql", 3),
             "saasagenda/identidade/contexto/AuditoriaController.java", Map.of("sql", 1));
 
     @Test

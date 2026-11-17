@@ -56,4 +56,26 @@ class AuditoriaJdbcTest {
         assertThatThrownBy(() -> new AuditoriaJdbc(10, AuditoriaApi.TETO_ABSOLUTO + 1)).isInstanceOf(IllegalStateException.class);
         assertThat(new AuditoriaJdbc(1, AuditoriaApi.TETO_ABSOLUTO)).isNotNull();
     }
+
+    @Test
+    void registrarGravaUmEventoComAtorDaSessaoOuFalha() {
+        AuditoriaJdbc a = new AuditoriaJdbc(100, 500);
+        UUID anexo = UUID.randomUUID();
+        UUID clinica = UUID.randomUUID();
+        List<Object[]> gravados = new ArrayList<>();
+        a.registrar((sql, p) -> {
+            textos.add(sql);
+            gravados.add(p);
+            return 1;
+        }, "DOWNLOAD_ANEXO", "anexo_encaminhamento", anexo, clinica, "127.0.0.1", "WEB");
+        assertThat(textos).containsExactly(AuditoriaJdbc.REGISTRA);
+        assertThat(gravados.get(0)).containsExactly(clinica, "DOWNLOAD_ANEXO", "anexo_encaminhamento", anexo, "127.0.0.1", "WEB");
+        // O ator nunca vem do chamador: papel e id saem da sessao no banco.
+        assertThat(AuditoriaJdbc.REGISTRA).contains("saas.papel_efetivo(), saas.ator_id_efetivo()")
+                .doesNotContain(anexo.toString());
+        assertThatThrownBy(() -> a.registrar((sql, p) -> 0, "X", "y", anexo, null, null, "WEB"))
+                .isInstanceOf(AuditoriaApi.AuditoriaNaoGravadaException.class);
+        assertThatThrownBy(() -> a.registrar((sql, p) -> 1, "", "y", anexo, null, null, "WEB"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

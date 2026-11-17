@@ -16,6 +16,12 @@ public interface ConsultaContexto {
 
     <T> T queryForObject(String sql, Class<T> tipo, Object... parametros);
 
+    /**
+     * INSERT/UPDATE sem {@code RETURNING} (por exemplo, a inclusão de EventoAuditoria por quem não
+     * pode ler a tabela); devolve as linhas afetadas.
+     */
+    int update(String sql, Object... parametros);
+
     /** Tipo do ator da sessão aplicada (EQUIPE, PACIENTE, ENCAMINHADOR) ou nulo sem sessão válida. */
     String tipoAtor();
 }

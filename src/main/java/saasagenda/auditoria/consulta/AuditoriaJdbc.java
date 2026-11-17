@@ -23,6 +23,11 @@ class AuditoriaJdbc implements AuditoriaApi {
             + "WHERE c.id = ? AND c.clinica_id = ?) "
             + "ORDER BY e.ocorrido_em DESC, e.id DESC LIMIT ?";
 
+    /** Ator pela sessão do banco; clínica, IP e canal como parâmetros ligados. */
+    static final String REGISTRA = "INSERT INTO saas.evento_auditoria"
+            + "(ator_papel, ator_id, clinica_id, acao, recurso_tipo, recurso_id, ip_origem, canal) "
+            + "VALUES (saas.papel_efetivo(), saas.ator_id_efetivo(), ?::uuid, ?, ?, ?::uuid, ?::inet, ?)";
+
     private final int padrao;
     private final int teto;
 
@@ -55,5 +60,17 @@ class AuditoriaJdbc implements AuditoriaApi {
             return new Pagina(pagina, pagina.get(n - 1));
         }
         return new Pagina(ids, null);
+    }
+
+    @Override
+    public void registrar(Gravador gravador, String acao, String recursoTipo, UUID recursoId, UUID clinicaId,
+            String ipOrigem, String canal) {
+        if (gravador == null || acao == null || acao.isBlank() || recursoTipo == null || recursoTipo.isBlank()) {
+            throw new IllegalArgumentException("evento de auditoria incompleto");
+        }
+        int linhas = gravador.update(REGISTRA, clinicaId, acao, recursoTipo, recursoId, ipOrigem, canal);
+        if (linhas != 1) {
+            throw new AuditoriaNaoGravadaException();
+        }
     }
 }

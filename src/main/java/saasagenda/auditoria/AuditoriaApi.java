@@ -22,6 +22,32 @@ public interface AuditoriaApi {
 
     Pagina consultar(LeitorIds leitor, UUID clinicaId, UUID depoisDe, Integer limite);
 
+    /**
+     * Grava um EventoAuditoria pelo {@link Gravador} da transação em que o acesso é autorizado
+     * (mapa de módulos, auditoria: chamada síncrona na mesma transação, para que acesso sem registro
+     * não aconteça). O ator não é parâmetro: papel e id saem da sessão no banco
+     * ({@code papel_efetivo()}, {@code ator_id_efetivo()}) e a política {@code auditoria_inclui}
+     * confere. {@code clinicaId} nulo ou igual à clínica do contexto. Se a inclusão não gravar
+     * exatamente uma linha, lança exceção: o chamador não pode seguir com o acesso.
+     */
+    void registrar(Gravador gravador, String acao, String recursoTipo, UUID recursoId, UUID clinicaId,
+            String ipOrigem, String canal);
+
+    /** Executa INSERT de texto fixo com parâmetros ligados e devolve as linhas afetadas. */
+    @FunctionalInterface
+    interface Gravador {
+        int update(String sql, Object... parametros);
+    }
+
+    /** O evento não foi gravado: o acesso que ele registraria não pode acontecer. */
+    final class AuditoriaNaoGravadaException extends RuntimeException {
+        private static final long serialVersionUID = 1L;
+
+        public AuditoriaNaoGravadaException() {
+            super("auditoria nao gravada", null, false, false);
+        }
+    }
+
     /** Executa SQL fixo com parâmetros ligados e devolve a primeira coluna como UUID. */
     @FunctionalInterface
     interface LeitorIds {

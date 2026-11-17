@@ -37,6 +37,14 @@ dependencies {
     implementation("org.springframework.security:spring-security-oauth2-jose")
     runtimeOnly("org.postgresql:postgresql")
 
+    // F8: URL pre-assinada SigV4 do S3 (SDK v2). So o presigner: nenhum cliente HTTP, nenhuma
+    // chamada a nuvem na aplicacao (o arquivo vai do cliente direto ao bucket).
+    implementation(platform("software.amazon.awssdk:bom:2.39.6"))
+    implementation("software.amazon.awssdk:s3") {
+        exclude(group = "software.amazon.awssdk", module = "netty-nio-client")
+        exclude(group = "software.amazon.awssdk", module = "apache-client")
+    }
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
