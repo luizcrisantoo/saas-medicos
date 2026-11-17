@@ -2,7 +2,7 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 12 de 14.
+Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 13 de 14.
 
 ## Features
 
@@ -15,7 +15,7 @@ Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 vo
 | F5 | CI: guarda de migração (R-07, R-08) e GitHub Actions | PRONTA (saída 0, tentativa 3) | 3 | 9 de 9 | Verificador 9/9; Revisor APROVADO com ressalvas |
 | F6 | Autenticação Cognito (resource server) e sessão de equipe no banco | PRONTA (saída 0) | 1 | 7 de 7 | Verificador 7/7; Revisor APROVADO com ressalvas |
 | F7 | Contexto por transação, pool seguro, I-20, credencial de jobs separada (E-09) | PRONTA (saída 0, tentativa 2) | 2 | 9 de 9 | Verificador 9/9; Revisor APROVADO com ressalvas |
-| F8 | Storage S3 com SSE-KMS e URL assinada curta, auditoria de acesso | PENDENTE | 0 | 0 de 9 | baseline |
+| F8 | Storage S3 com SSE-KMS e URL assinada curta, auditoria de acesso | PRONTA (saída 0) | 1 | 9 de 9 | Verificador 9/9; Revisor APROVADO com ressalvas |
 | F9 | Base LGPD: consentimento pela API, termos e política em rascunho | PENDENTE | 0 | 0 de 7 | baseline |
 | F10 | Terraform AWS sa-east-1, 3 ambientes, orçamento coerente com R$ 800 | PENDENTE | 0 | 0 de 10 | baseline |
 | F11 | MFA obrigatório para ADMIN e MEDICO | BLOQUEADA (B2) | 0 | 0 de 3 | baseline |
@@ -146,3 +146,6 @@ e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca
 | 11 | 2026-11-17 | F7 | a401412 | REPROVADO: AuditoriaJdbc confere transação e não contexto; conexão suja não é descartada do pool; teste de I-20 não pega concatenação fora de set_config nem .sql; LIMIT 500 chumbado; lista negra em JobsBanco | 9 VERDE; F1-F6 verdes | F2.9 verde | Devolver ao Executor |
 | 12 | 2026-11-17 | F7 | 5c9d33a | APROVADO (ressalvas: pool auth e timeouts de isValid chumbados; health sem autenticação ocupa conexão) | 9 VERDE; F1-F6 verdes | F2.9 verde | Sucesso F7 |
 - P9 (F7, Revisor): pool de auth (máximo 2) e timeouts de isValid ainda chumbados; health sem autenticação pode ocupar conexão do pool.
+| 13 | 2026-11-17 | F8 | 8909d7e | APROVADO (ressalvas: clinica_id nulo no evento de paciente/encaminhador; DataAccessException vira 403; IP atrás de balanceador) | 9 VERDE; F1-F7 verdes | F2.9 verde | Sucesso F8 |
+- P10 (F8, Revisor): evento de auditoria de download feito por paciente/encaminhador fica com clinica_id nulo e o ADMIN não vê; derivar a clínica do caso.
+- P11 (F8, Revisor): toda DataAccessException vira 403 (esconde falha de infra); IP real atrás de balanceador (X-Forwarded-For confiável) a configurar com a hospedagem.
