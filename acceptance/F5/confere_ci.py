@@ -3,7 +3,10 @@
 
 Uso: confere_ci.py RAIZ_REPO -> imprime 'ok|falha <id> <detalhe>'.
 Ids: GATILHO (pull_request), TESTES (./gradlew build|test|check), SAST, DEPENDENCIAS, SEGREDOS,
-GUARDA_MIGRACAO e GUARDA_REVERSAO (scripts/ci/guarda-migracao.sh sobre db/migration e db/reversao).
+GUARDA_MIGRACAO e GUARDA_REVERSAO (scripts/ci/guarda-migracao.sh sobre db/migration e db/reversao),
+GUARDA_BASE (iteracao 9: a guarda e a lista de tabelas sensiveis saem de um checkout do commit da
+branch base, nunca do PR: no mesmo job, um actions/checkout com 'ref' da base e 'path' proprio, e a
+guarda invocada como '<path>/scripts/ci/guarda-migracao.sh' sobre db/migration e sobre db/reversao).
 A sintaxe (actionlint) e conferida pelo runner.
 """
 import glob
@@ -51,6 +54,24 @@ def main(raiz):
     g = [r for t, r in tudo if "scripts/ci/guarda-migracao.sh" in r]
     print(("ok" if any("db/migration" in r for r in g) else "falha") + " GUARDA_MIGRACAO guarda roda sobre db/migration")
     print(("ok" if any("db/reversao" in r for r in g) else "falha") + " GUARDA_REVERSAO guarda roda sobre db/reversao")
+    base = {"db/migration": False, "db/reversao": False}
+    for wf in wfs:
+        for job in (wf.get("jobs") or {}).values():
+            caminhos = []
+            for st in job.get("steps") or []:
+                w = st.get("with") or {}
+                ref = str(w.get("ref", "")).replace(" ", "")
+                if str(st.get("uses", "")).startswith("actions/checkout@") and w.get("path") and \
+                        ("pull_request.base.sha" in ref or "github.base_ref" in ref):
+                    caminhos.append(str(w["path"]).strip().strip("/").removeprefix("./"))
+            for st in job.get("steps") or []:
+                for linha in str(st.get("run", "")).splitlines():
+                    cmd = linha.strip().removeprefix("./")
+                    if any(c and cmd.startswith(c + "/scripts/ci/guarda-migracao.sh") for c in caminhos):
+                        for k in base:
+                            if k in cmd:
+                                base[k] = True
+    print(("ok" if all(base.values()) else "falha") + " GUARDA_BASE guarda e lista de tabelas sensiveis da branch base sobre db/migration e db/reversao do PR")
 
 
 if __name__ == "__main__":

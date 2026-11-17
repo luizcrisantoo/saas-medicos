@@ -3,13 +3,13 @@
 TITULO="CI: guarda de migracao (R-07, R-08) e GitHub Actions com testes, SAST, dependencias e segredos"
 aceite() {
   declara F5.1 "scripts/ci/guarda-migracao.sh existe e aceita as migracoes do repositorio com as aprovacoes registradas"
-  declara F5.2 "a guarda recusa migracao nao aprovada com DISABLE TRIGGER, NO FORCE/DISABLE RLS, DROP POLICY, DROP TRIGGER, session_replication_role, CREATE/ALTER POLICY ou CREATE TRIGGER"
+  declara F5.2 "a guarda recusa migracao nao aprovada com DISABLE TRIGGER, NO FORCE/DISABLE RLS, DROP POLICY, DROP TRIGGER, session_replication_role, CREATE/ALTER POLICY, CREATE TRIGGER, GRANT em tabela sensivel ou nao classificada, DROP INDEX/CONSTRAINT, CREATE TABLE sem ENABLE e FORCE RLS ou SET/DROP DEFAULT em coluna de tenant, chave, storage ou status"
   declara F5.3 "a guarda nao e enganada por variacoes de escrita do mesmo comando"
-  declara F5.4 "a guarda aceita migracao limpa (tabela com RLS, indice, coluna, GRANT)"
+  declara F5.4 "a guarda aceita migracao limpa (tabela com RLS, indice, coluna, GRANT em tabela nao sensivel, REVOKE)"
   declara F5.5 "aprovacao presa ao sha256 do conteudo e ao nome do arquivo"
   declara F5.6 "workflows passam no actionlint e rodam em pull_request"
   declara F5.7 "pipeline tem testes (./gradlew), SAST, varredura de dependencias e de segredos"
-  declara F5.8 "pipeline roda a guarda sobre db/migration e db/reversao, e a guarda aceita as reversoes do repositorio"
+  declara F5.8 "pipeline roda a guarda da branch base sobre db/migration e db/reversao do PR, e a guarda aceita as reversoes do repositorio"
   declara F5.9 "pipeline varre segredos; nenhum segredo no repositorio (gitleaks) e a configuracao do repositorio ainda detecta uma chave plantada"
   local G="$RAIZ/scripts/ci/guarda-migracao.sh" out
   out=$(python3 "$ACC/F5/testa_guarda.py" "$G" "$RAIZ" 2>&1); echo "$out" >>"$LOGF"
