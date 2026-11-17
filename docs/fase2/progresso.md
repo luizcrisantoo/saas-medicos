@@ -2,7 +2,7 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 6 de 14.
+Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 7 de 14.
 
 ## Features
 
@@ -12,7 +12,7 @@ Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 vo
 | F2 | Migrações Flyway do modelo v2, dono sem login, reversão e regressão | PRONTA (saída 0) | 1 | 9 de 9 | Verificador 9/9 VERDE; Revisor APROVADO com ressalvas não bloqueantes |
 | F3 | Gates de identidade: T-20, I-22, I-23 | PRONTA (saída 0, tentativa 2) | 2 | 4 de 4 | Verificador 4/4; Revisor APROVADO; nascimento NULL sobe ao Negócio |
 | F4 | Gates de banco: R-08, I-21, O3, envios após cancelamento, volume (E-09) | PRONTA (saída 0, tentativa 2) | 2 | 5 de 5 | Verificador 5/5; Revisor APROVADO com ressalvas (ruído de GRANT na migração; telefone sem DDD contorna volume; custo quadrático do preparo) |
-| F5 | CI: guarda de migração (R-07, R-08) e GitHub Actions | PENDENTE | 0 | 0 de 9 | baseline |
+| F5 | CI: guarda de migração (R-07, R-08) e GitHub Actions | EM CORREÇÃO (tentativa 2) | 1 | 9 de 9 | Verificador 9/9; Revisor REPROVADO (14 migrações maliciosas passaram) |
 | F6 | Autenticação Cognito (resource server) e sessão de equipe no banco | PENDENTE | 0 | 0 de 7 | baseline |
 | F7 | Contexto por transação, pool seguro, I-20, credencial de jobs separada (E-09) | PENDENTE | 0 | 0 de 9 | baseline |
 | F8 | Storage S3 com SSE-KMS e URL assinada curta, auditoria de acesso | PENDENTE | 0 | 0 de 9 | baseline |
@@ -135,3 +135,4 @@ e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca
 - P2 (F4, Revisor): contagem de volume chama envio_contato por envio da última hora (custo quadrático) (V3:209-212).
 - P3 (F4, Revisor): todo GRANT/REVOKE gera ALERTA_DDL_SAAS, inclusive das migrações legítimas; o alarme precisa correlacionar com execução do pipeline (ADR-0039).
 - P4 (F3, Negócio): nascimento presente em só um dos registros com CPF e nome iguais funde as pessoas (spec F3.1). Decisão do Luiz se quer endurecer.
+| 7 | 2026-11-17 | F5 | d78abbc | REPROVADO: guarda não pega função de política trocada, SECURITY DEFINER, GRANT PUBLIC, COPY PROGRAM, SET ROLE, row_security, dblink, OWNER TO; sem CODEOWNERS; job com write; actions por tag | 9 VERDE; F1-F4 verdes | F2.9 verde | Devolver ao Executor |
