@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,7 @@ import saasagenda.identidade.SessaoApi;
  * (nunca o JWT). Toda recusa é 401 sem corpo de detalhe. Os logs nunca levam token, cookie ou sub.
  */
 @RestController
+@Profile("web")
 @RequestMapping("/api/sessao")
 class SessaoController {
 

@@ -46,6 +46,7 @@ import org.springframework.boot.test.system.CapturedOutput;
 import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.ApplicationContext;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
@@ -58,6 +59,8 @@ import org.testcontainers.utility.DockerImageName;
  * Dados fictícios.
  */
 @ExtendWith(OutputCaptureExtension.class)
+// Processo web fixo: o SAAS_PROCESSO do ambiente de quem roda a suíte não muda o teste.
+@ActiveProfiles("web")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class SessaoEquipeTest {
 
