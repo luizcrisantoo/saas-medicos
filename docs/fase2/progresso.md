@@ -8,7 +8,7 @@ Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 vo
 
 | Feature | Título | Status | Tentativas | Critérios VERDE | Último resultado |
 |---|---|---|---|---|---|
-| F1 | Esqueleto Spring Boot 3 + Spring Modulith, 8 módulos e fronteiras | PENDENTE | 0 | 0 de 6 | baseline |
+| F1 | Esqueleto Spring Boot 3 + Spring Modulith, 8 módulos e fronteiras | EM REVISÃO (Executor concluiu; aguarda Orquestrador e Revisor) | 0 | 0 de 6 | Executor: run.sh F1 6 VERDE, 0 VERMELHO; ./gradlew build ok (8 testes próprios) |
 | F2 | Migrações Flyway do modelo v2, dono sem login, reversão e regressão | PENDENTE | 0 | 0 de 9 | baseline |
 | F3 | Gates de identidade: T-20, I-22, I-23 | PENDENTE | 0 | 0 de 4 | baseline |
 | F4 | Gates de banco: R-08, I-21, O3, envios após cancelamento, volume (E-09) | PENDENTE | 0 | 0 de 5 | baseline |
