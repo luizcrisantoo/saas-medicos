@@ -25,7 +25,7 @@ PROIBIDOS = {
     "alter_policy": "ALTER POLICY encaminhamento_paciente ON saas.encaminhamento USING (true);",
     "create_trigger": "CREATE TRIGGER t BEFORE UPDATE ON saas.encaminhamento FOR EACH ROW EXECUTE FUNCTION saas.bloqueia_alteracao();",
 }
-# casos que o Executor nao ve no criterio (anti reward hacking; ver acceptance/NOTAS-ANTI-HACK.md)
+# casos que o Executor nao ve no criterio (anti reward hacking; notas privadas do Orquestrador)
 VARIANTES = {
     "minusculas": "alter table saas.historico_status_encaminhamento disable trigger all;",
     "quebra_de_linha": "ALTER TABLE saas.encaminhamento\n  DISABLE\n  TRIGGER\n  encaminhamento_valida;",
