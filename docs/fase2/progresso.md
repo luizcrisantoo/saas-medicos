@@ -2,13 +2,13 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 0 de 14.
+Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 1 de 14.
 
 ## Features
 
 | Feature | Título | Status | Tentativas | Critérios VERDE | Último resultado |
 |---|---|---|---|---|---|
-| F1 | Esqueleto Spring Boot 3 + Spring Modulith, 8 módulos e fronteiras | EM REVISÃO (Executor concluiu; aguarda Orquestrador e Revisor) | 0 | 0 de 6 | Executor: run.sh F1 6 VERDE, 0 VERMELHO; ./gradlew build ok (8 testes próprios) |
+| F1 | Esqueleto Spring Boot 3 + Spring Modulith, 8 módulos e fronteiras | PRONTA (saída 0) | 1 | 6 de 6 | Verificador 6/6 VERDE; Revisor APROVADO |
 | F2 | Migrações Flyway do modelo v2, dono sem login, reversão e regressão | PENDENTE | 0 | 0 de 9 | baseline |
 | F3 | Gates de identidade: T-20, I-22, I-23 | PENDENTE | 0 | 0 de 4 | baseline |
 | F4 | Gates de banco: R-08, I-21, O3, envios após cancelamento, volume (E-09) | PENDENTE | 0 | 0 de 5 | baseline |
@@ -122,3 +122,4 @@ fc1aba9b9b83fb4fbbe801f664d94cd193a54770abfc4c55fe767d8a907c3578  docs/seguranca
 1c9e9b69d0b949aea7dc79c39a8e9e57b227c224dcad48347a3a90a081dab3fa  docs/seguranca/evidencias/red-team-sondas-r2.sql
 e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca/evidencias/red-team-sondas.sql
 ```
+| 1 | 2026-11-17 | F1 | 61df927 | APROVADO | 6 VERDE 0 VERMELHO | n/a (sem banco ainda) | Sucesso F1 |
