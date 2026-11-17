@@ -1,0 +1,7 @@
+# Varredura de segredos (gitleaks 8.21.2): regras padrao do gitleaks, sem allowlist.
+# Excecao so por achado (fingerprint em .gitleaksignore), com justificativa no PR;
+# nunca por caminho inteiro, extensao ou regex generica.
+title = "saas-agenda"
+
+[extend]
+useDefault = true

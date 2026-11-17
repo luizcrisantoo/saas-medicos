@@ -1,0 +1,24 @@
+# Aprovacoes da guarda de migracao (scripts/ci/guarda-migracao.sh; ADR-0027, ADR-0039, ADR-0040).
+# Formato do sha256sum: "<sha256>  <arquivo>". A aprovacao vale para o conteudo exato
+# e para o nome: mudou um byte ou o nome, a guarda recusa de novo.
+# Quem aprova: revisao do Red Team registrada no PR. Toda linha nova leva uma
+# justificativa curta em comentario logo acima.
+#
+# V1 (modelo v2): CREATE POLICY, CREATE TRIGGER, funcoes de gatilho e o DO que liga
+# ENABLE/FORCE RLS por EXECUTE format(). Revisada na F2 (Revisor APROVADO; regressao das
+# baterias -r2 verde).
+f13e0b113eb875a9eb208d7df385c6bc94374d2943e51f91cd9da58874d42e96  V1__modelo_v2.sql
+# V2 (gates de identidade T-20, I-22, I-23): ALTER POLICY e funcoes de gatilho.
+# Revisada na F3, tentativa 2 (Revisor APROVADO).
+42a477a36bdf51c267ea6862bd198086cbdbe7919ad1595a6c002b0a983e96b5  V2__gates_identidade.sql
+# V3 (gates de banco R-08, I-21, O3, envios apos cancelamento, E-09): CREATE TRIGGER
+# agendamento_cancela_envios e encaminhamento_derruba_envios, ALTER POLICY de O3.
+# Revisada na F4, tentativa 2 (Revisor APROVADO; ADR-0039, Consequencias).
+067aeb0a7071daebef293514bba757610abd17638ebcbcc75748487fd4513df6  V3__gates_banco.sql
+# Reversoes (db/reversao, mesmo nome da migracao, conteudo diferente): desfazem a versao
+# correspondente (DROP ... CASCADE de funcoes e tabelas, DROP TRIGGER, ALTER POLICY de
+# volta, DO com EXECUTE format()). Testadas versao a versao por pg_dump na F2.8 e
+# revisadas junto com cada migracao (F2, F3, F4).
+fbe646e1fd36148352d79a35204bda6956115acc7f11bfbce7904ada9b4f5981  V1__modelo_v2.sql
+203ce1eb0cccfbada812b546a0218b999d3fb6f4cb402aaa4d094f2f83edad37  V2__gates_identidade.sql
+4abe0bfd403fd0b303c14c97321b0ba927dd6ddabfa380b4c3fc12e885e36919  V3__gates_banco.sql

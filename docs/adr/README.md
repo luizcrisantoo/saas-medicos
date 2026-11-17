@@ -48,3 +48,4 @@ Status usados:
 | [ADR-0037](0037-paciente-menor-responsavel.md) | Paciente menor com cadastro próprio ligado a responsável | Aceito |
 | [ADR-0038](0038-gates-identidade-fase2.md) | CPF só identifica com nome e nascimento; telefone de contato do caso; vínculo revogado não serve à recepção (substitui o item 2a do ADR-0036) | Proposto (Fase 2, F3), sujeito ao Red Team |
 | [ADR-0039](0039-gates-banco-fase2.md) | Alerta de DDL pela tabela alvo; funções sem sessão; diretório sem cadastro não verificado; envios derrubados no cancelamento; alerta de volume de preparo | Proposto (Fase 2, F4), sujeito ao Red Team |
+| [ADR-0040](0040-guarda-migracao-ci.md) | Guarda de migração no CI por análise léxica do SQL, aprovação presa a sha256 e nome | Proposto (Fase 2, F5), sujeito ao Red Team |
