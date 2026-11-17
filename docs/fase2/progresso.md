@@ -2,7 +2,7 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 22 iterações no total (14 originais; o Negócio mandou retomar em 2026-11-17 depois da saída 1 e o Orquestrador estendeu para 22: F10 até 3 tentativas, F11 e F12 até 2 cada depois de B1/B2, 1 para o Red Team final), 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 15 de 22.
+Limites: 22 iterações no total (14 originais; o Negócio mandou retomar em 2026-11-17 depois da saída 1 e o Orquestrador estendeu para 22: F10 até 3 tentativas, F11 e F12 até 2 cada depois de B1/B2, 1 para o Red Team final), 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 16 de 22.
 
 ## Features
 
@@ -158,6 +158,15 @@ e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca
 - P16 (F10, Revisor): versionamento sem expiração de versões não correntes (retenção, P7); estimativa de custo do README subestima: 3 RDS t4g + 9 chaves KMS + 15 segredos ficam em US$ 110 a 120/mês (R$ 550 a 750), sobrando pouco para computação (P3) e WhatsApp dentro dos R$ 800.
 - P17 (F10, Negócio): decisões do Executor que precisam de aval do Luiz: (a) MFA do Cognito `OPTIONAL` por padrão até B2 (F6 não confere MFA; prod aplicada assim deixa ADMIN e MEDICO sem segundo fator, contra o ADR-0007; sugestão: prod sem padrão, obrigando a passar o valor); (b) orçamento no teto cheio de R$ 800 só para a AWS, sendo que o ADR-0013 soma WhatsApp (fora da AWS); avisos de 50 e 80% atenuam; Luiz decide se baixa a fração; (c) se P5 virar uma conta por ambiente, `conta/` aplicada em cada uma dá 3 x R$ 800.
 
+| 16 | 2026-11-17 | Red Team final (F1 a F10) | n/a (só leitura; relatório 54df07e) | n/a | n/a | n/a | LIBERA COM CORREÇÕES: sem reward hacking nos gates; RT3-1 MÉDIO (JWKS sem rate limit, amplificação 1:1 pré-auth, eleva P7), RT3-2 ALTO condicional (MFA OPTIONAL em prod = P17a/B2), RT3-3 a RT3-5 BAIXO, RT3-6 INFO. Relatório: docs/seguranca/red-team-fase2-final.md |
+- P7 reclassificada (Red Team RT3-1): explorável; 40 tokens com `kid` desconhecido = 40 buscas à JWKS. Corrigir antes de qualquer apply em produção (JWKSource com cache e rate limit, ou limitador por IP em `/api/sessao/equipe`).
+- P12 reclassificada (Red Team RT3-5): duplicata de consentimento ativo provada com concessões concorrentes; índice único parcial.
+- P17a reclassificada (Red Team RT3-2): tornar `mfa_configuration` obrigatória em prod (ou forçar ON quando prod) até B2.
+- P18 (Red Team RT3-3, RT3-4, RT3-6, BAIXO/INFO): sem mínimo de chave RSA nem teto de `exp` no resource server; alerta de DDL cego a objeto fora de `saas` criado por superusuário; `saas_app` enxerga `query` em `pg_stat_activity` de backends com rastreio ligado.
+- Casos escondidos novos recomendados ao Arquiteto (relatório, seção 6): F6 flood de `kid` desconhecido vs buscas à JWKS; F6 `exp` acima do teto e RSA < 2048; F4 objeto fora de `saas` que referencia `saas`; F9 duas concessões concorrentes; F10 apply de prod sem `mfa_configuration` falha.
+
 ## Parada do loop
 
-Saída 1 (Limite) em 2026-11-17 com 14 de 14: F1 a F9 prontas (`run.sh all`: 65 VERDE; docs/fase2/aceite-final-iteracao14.log). Retomada no mesmo dia por ordem do Negócio, limite estendido para 22. Iteração 15: F10 PRONTA. Pendente: Red Team final da Fase 2 (iteração 16); F11 (B2) e F12 (B1) seguem no Gate (saída 4) aguardando o Negócio.
+Saída 1 (Limite) em 2026-11-17 com 14 de 14: F1 a F9 prontas (`run.sh all`: 65 VERDE; docs/fase2/aceite-final-iteracao14.log). Retomada no mesmo dia por ordem do Negócio, limite estendido para 22. Iteração 15: F10 PRONTA. Iteração 16: Red Team final rodado, LIBERA COM CORREÇÕES.
+
+Estado atual: **Saída 2 (Bloqueio)**. F11 (B2) e F12 (B1) dependem de decisão BLOQUEANTE do Negócio (spec, seção 7); sem B1 e B2 não há critério de aceite a escrever e a fase não fecha (parada de sucesso exige as BLOQUEANTES decididas e testadas). Próximo passo: Luiz decide B1 e B2; o Arquiteto escreve F11.n e F12.n e os testes em `acceptance/F11` e `acceptance/F12`; o Orquestrador regenera os checksums; 6 iterações restantes (17 a 22).
