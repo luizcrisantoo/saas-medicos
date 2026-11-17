@@ -29,6 +29,14 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.modulith:spring-modulith-starter-core")
 
+    // F6: API HTTP, health e acesso ao banco (saas_app pelo pool padrao, saas_auth em pool proprio).
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-jdbc")
+    // Validacao do access token do Cognito (RS256 pela JWKS configurada), sem cadeia de filtros.
+    implementation("org.springframework.security:spring-security-oauth2-jose")
+    runtimeOnly("org.postgresql:postgresql")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
@@ -39,7 +47,6 @@ dependencies {
     testImplementation("org.flywaydb:flyway-database-postgresql")
     testImplementation("org.testcontainers:postgresql")
     testImplementation("org.testcontainers:junit-jupiter")
-    testRuntimeOnly("org.postgresql:postgresql")
 }
 
 tasks.withType<JavaCompile>().configureEach {
