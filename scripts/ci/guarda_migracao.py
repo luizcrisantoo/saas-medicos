@@ -11,7 +11,13 @@ todo corpo $$...$$ (DO, CREATE FUNCTION, EXECUTE '...') e analisado de novo
 como SQL. As regras olham a sequencia de palavras, nao o texto cru: caixa,
 quebras de linha, tabs, comentarios e aspas nao mudam o resultado.
 
-Uma migracao "perigosa" so passa se o par (sha256 do conteudo exato, nome do
+Lista de construcoes PERMITIDAS (tentativa 2, ADR-0040 item 2): cada comando de primeiro
+nivel e comparado com uma lista curta de DDL comum (tabela, indice, coluna, tipo enumerado,
+comentario, INSERT de dado de referencia, SET ROLE saas_owner, search_path); todo o resto
+exige aprovacao. Detectores nomeados (funcao, privilegio, dono, papel, row_security,
+set_config, COPY, LOAD, extensao, visao...) rodam tambem dentro de literais e corpos $$.
+
+Uma migracao fora da lista so passa se o par (sha256 do conteudo exato, nome do
 arquivo) estiver em ARQUIVO_APROVACOES, no formato do sha256sum. Linhas que
 comecam com '#' sao comentarios (a justificativa da aprovacao).
 
@@ -324,7 +330,421 @@ PALAVRAS_PROIBIDAS = {
     "session_replication_role": "session_replication_role (desliga gatilhos e regras)",
     "bypassrls": "atributo BYPASSRLS (papel que ignora RLS)",
     "superuser": "atributo SUPERUSER",
+    "createrole": "atributo CREATEROLE",
+    "row_security": "parametro row_security (como a RLS e avaliada)",
+    "security_barrier": "opcao security_barrier de visao",
+    "security_invoker": "opcao security_invoker de visao",
 }
+
+# Parametros que mudam quem acessa o que ou como a seguranca e avaliada. Todo parametro
+# com ponto (app.clinica_id, app.papel, app.sessao, saas.transicao: contexto das politicas
+# e dos gatilhos) tambem conta.
+PARAMETROS_DE_SEGURANCA = {
+    "role", "session_authorization", "search_path", "row_security",
+    "session_replication_role", "default_transaction_read_only", "transaction_read_only",
+    "check_function_bodies", "local_preload_libraries", "session_preload_libraries",
+    "shared_preload_libraries", "dynamic_library_path", "jit_provider",
+}
+
+
+def _parametro_de_seguranca(nome):
+    nome = nome.strip().lower()
+    return nome in PARAMETROS_DE_SEGURANCA or "." in nome
+
+
+# ---------------------------------------------------------------------------
+# Lista de construcoes PERMITIDAS sem aprovacao (comando de primeiro nivel).
+# Todo o resto exige aprovacao (ADR-0040, item 2). Na duvida, recusa.
+# ---------------------------------------------------------------------------
+
+SCHEMA_PERMITIDO = "saas"
+# Convencao das migracoes: o Flyway conecta como saas_migracao e faz SET ROLE saas_owner
+# para que o dono dos objetos seja sempre saas_owner. Qualquer outro papel exige aprovacao.
+PAPEL_DE_MIGRACAO = "saas_owner"
+SEARCH_PATH_PERMITIDO = {"saas", "public", "pg_catalog"}
+PARAMETROS_SET_PERMITIDOS = {"lock_timeout", "statement_timeout", "client_min_messages"}
+# INSERT sem aprovacao so em tabela de dados de referencia (sem efeito sobre acesso).
+# usuario_clinica, paciente_clinica, profissional_clinica, flag_clinica etc. mudam quem
+# acessa o que: exigem aprovacao.
+TABELAS_REFERENCIA = {"especialidade"}
+
+# Palavras (sem aspas) que nunca aparecem num comando permitido.
+PALAVRAS_FORA_DA_LISTA = {
+    "security", "security_barrier", "security_invoker", "owner", "grant", "revoke",
+    "policy", "trigger", "rule", "execute", "function", "procedure", "routine", "role",
+    "authorization", "tablespace", "select", "copy", "program", "definer", "invoker",
+    "privileges", "extension", "schema", "system", "bypassrls",
+    "superuser", "session_replication_role", "row_security", "load", "returning",
+    "view", "inherit", "public",
+}
+
+# Antes de "(", palavras-chave e nomes de tipo/funcao comuns aceitos em DDL de tabela.
+ANTES_DE_PARENTESE_OK = {
+    # palavras-chave
+    "key", "unique", "check", "exclude", "include", "where", "values", "default", "as",
+    "in", "not", "and", "or", "any", "all", "some", "with", "exists", "enum", "conflict",
+    "identity", "array", "row", "filter", "over", "by", "is", "then", "else", "when",
+    "case", "distinct", "between", "like", "ilike", "similar",
+    # metodos de indice
+    "btree", "gin", "gist", "hash", "brin", "spgist",
+    # tipos com modificador
+    "varchar", "char", "character", "varying", "numeric", "decimal", "bit", "timestamp",
+    "timestamptz", "time", "timetz", "interval", "float",
+    # funcoes da biblioteca padrao sem efeito colateral
+    "now", "gen_random_uuid", "lower", "upper", "btrim", "ltrim", "rtrim", "trim",
+    "length", "char_length", "octet_length", "date_trunc", "timezone", "abs", "round",
+    "coalesce", "nullif", "greatest", "least", "cast", "extract", "position", "substring",
+    "left", "right", "nextval", "clock_timestamp", "statement_timestamp",
+    "transaction_timestamp", "jsonb_typeof", "jsonb_array_length", "array_length",
+    "cardinality", "to_tsvector", "regexp_replace", "date_part", "make_interval",
+}
+# Palavra antes de um nome seguido de "(": o nome e tabela, nao funcao.
+ANTES_DE_TABELA = {"table", "exists", "into", "on", "only", "references"}
+
+
+def _kw(t):
+    """Palavra-chave: so palavra sem aspas ("owner" entre aspas e identificador)."""
+    if t is not None and t.tipo == "word":
+        return t.valor
+    return None
+
+
+def _eh_op(t, v):
+    return t is not None and t.tipo == "op" and t.valor == v
+
+
+def _nome_em(st, j):
+    """Nome possivelmente qualificado a partir de j: (partes, proximo indice) ou (None, j)."""
+    partes = []
+    while j < len(st) and st[j].tipo in ("word", "qident"):
+        partes.append(st[j].valor)
+        if j + 1 < len(st) and _eh_op(st[j + 1], "."):
+            j += 2
+            continue
+        return partes, j + 1
+    return None, j
+
+
+def _alvo_saas(partes):
+    return partes is not None and (len(partes) == 1 or (len(partes) == 2 and partes[0] == SCHEMA_PERMITIDO))
+
+
+def _fecha(st, j):
+    """st[j] e '(': indice depois do ')' correspondente, ou None."""
+    prof = 0
+    while j < len(st):
+        if _eh_op(st[j], "("):
+            prof += 1
+        elif _eh_op(st[j], ")"):
+            prof -= 1
+            if prof == 0:
+                return j + 1
+        j += 1
+    return None
+
+
+def _pula(st, j, *palavras):
+    """Pula a sequencia de palavras-chave opcional; devolve o novo indice."""
+    if all(j + k < len(st) and _kw(st[j + k]) == p for k, p in enumerate(palavras)):
+        return j + len(palavras)
+    return j
+
+
+def _partes_virgula(st, j, fim):
+    """Divide st[j:fim] nas virgulas de nivel 0."""
+    partes, atual, prof = [], [], 0
+    for t in st[j:fim]:
+        if _eh_op(t, "(") or _eh_op(t, "["):
+            prof += 1
+        elif _eh_op(t, ")") or _eh_op(t, "]"):
+            prof -= 1
+        if prof == 0 and _eh_op(t, ","):
+            partes.append(atual)
+            atual = []
+        else:
+            atual.append(t)
+    partes.append(atual)
+    return partes
+
+
+def _conteudo_comum(st):
+    """Confere o corpo de um comando permitido: palavras e chamadas fora da lista."""
+    for i, t in enumerate(st):
+        if t.tipo == "param" or (t.tipo == "op" and t.valor in ("\\", "${")):
+            return "parametro, meta-comando ou placeholder em comando comum"
+        w = _kw(t)
+        if w in PALAVRAS_FORA_DA_LISTA:
+            # ENABLE/FORCE ROW LEVEL SECURITY: so reforca a RLS
+            if w == "security" and i >= 3 and _kw(st[i - 1]) == "level" and _kw(st[i - 2]) == "row" \
+                    and _kw(st[i - 3]) in ("enable", "force"):
+                continue
+            return "palavra '%s' fora da lista de DDL comum" % w.upper()
+        if t.tipo in ("word", "qident") and i + 1 < len(st) and _eh_op(st[i + 1], "("):
+            # nome seguido de "(": tabela (depois de TABLE/ON/INTO/REFERENCES...) ou chamada
+            k = i
+            while k >= 2 and _eh_op(st[k - 1], ".") and st[k - 2].tipo in ("word", "qident"):
+                k -= 2
+            antes = _kw(st[k - 1]) if k >= 1 else None
+            if antes in ANTES_DE_TABELA:
+                continue
+            if k != i:
+                return "chamada qualificada (%s) em comando comum" % ".".join(
+                    x.valor for x in st[k:i + 1] if x.tipo != "op")
+            if t.tipo == "word" and w in ANTES_DE_PARENTESE_OK:
+                continue
+            # nome de coluna seguido de tipo com modificador ja passou acima (varchar etc.)
+            return "chamada de funcao fora da lista em comando comum (%s)" % t.valor
+    return None
+
+
+def _acao_alter_table(acao):
+    """Acao de ALTER TABLE permitida sem aprovacao (so cria ou reforca)."""
+    if not acao:
+        return False
+    a = [_kw(t) for t in acao]
+    if a[0] == "add":
+        return True  # coluna ou restricao nova
+    if a[0] == "validate" and len(a) >= 2 and a[1] == "constraint":
+        return True
+    if a[:4] in (["enable", "row", "level", "security"], ["force", "row", "level", "security"]) and len(a) == 4:
+        return True
+    # RENAME fica de fora: renomear tabela ou coluna e criar outra com o nome antigo troca o
+    # objeto que funcoes e visoes leem pelo nome, sem politica (sombra).
+    if a[0] == "alter":
+        j = 2 if len(a) > 1 and a[1] == "column" else 1
+        resto = a[j + 1:]
+        if resto[:3] == ["set", "not", "null"] and len(resto) == 3:
+            return True
+        if resto[:2] == ["set", "default"] or resto == ["drop", "default"]:
+            return True
+        if (resto[:1] == ["type"] or resto[:3] == ["set", "data", "type"]) and "using" not in resto:
+            # sem USING: conversao por cast, preserva o dado (USING reescreve, ex.: clinica_id)
+            return True
+    return False
+
+
+# GRANT/REVOKE sem aprovacao (decisao do Orquestrador na F5, tentativa 2; ADR-0040 item 2):
+# so privilegio de tabela ou de coluna em saas.* para os papeis da aplicacao. TRUNCATE (ignora
+# RLS), TRIGGER, ALL (inclui os dois), PUBLIC, papel, WITH GRANT OPTION, GRANTED BY, CASCADE,
+# EXECUTE em funcao, ALL TABLES IN SCHEMA e qualquer objeto fora de saas.* exigem aprovacao.
+PAPEIS_DA_APLICACAO = {"saas_app", "saas_jobs", "saas_auth"}
+PRIVILEGIOS_DE_TABELA = {"select", "insert", "update", "delete", "references"}
+
+
+def _grant_fora_da_lista(st):
+    """None se o GRANT/REVOKE e de tabela/coluna em saas.* para papel da aplicacao."""
+    k = [_kw(t) for t in st]
+    n = len(st)
+    motivo = "%s fora da lista (so privilegio de tabela ou coluna em saas.* para %s)" % (
+        (k[0] or "?").upper(), ", ".join(sorted(PAPEIS_DA_APLICACAO)))
+    if k[0] not in ("grant", "revoke") or "on" not in k:
+        return motivo
+    on = k.index("on")
+    privs = _partes_virgula(st, 1, on)
+    for pv in privs:
+        if not pv or pv[0].tipo != "word":
+            return motivo
+        w = pv[0].valor
+        if k[0] == "revoke" and w == "all" and len(privs) == 1:
+            resto = pv[2:] if len(pv) > 1 and _kw(pv[1]) == "privileges" else pv[1:]
+            if resto:
+                return motivo
+            continue
+        if w not in PRIVILEGIOS_DE_TABELA:
+            return motivo
+        if len(pv) > 1:
+            # lista de colunas: (a, b)
+            if not (_eh_op(pv[1], "(") and _fecha(pv, 1) == len(pv)
+                    and all(t.tipo in ("word", "qident") or _eh_op(t, ",") for t in pv[2:-1])):
+                return motivo
+    j = _pula(st, on + 1, "table")
+    destino = "to" if k[0] == "grant" else "from"
+    if destino not in k[j:]:
+        return motivo
+    d = j + k[j:].index(destino)
+    for obj in _partes_virgula(st, j, d):
+        partes, fim = _nome_em(obj, 0)
+        if partes is None or fim != len(obj) or len(partes) != 2 or partes[0] != SCHEMA_PERMITIDO:
+            return "%s em objeto fora de saas.* (use o nome qualificado saas.tabela)" % k[0].upper()
+    fim = n
+    if k[0] == "revoke" and k[-1] == "restrict":
+        fim = n - 1
+    for papel in _partes_virgula(st, d + 1, fim):
+        if len(papel) != 1 or papel[0].tipo != "word" or papel[0].valor not in PAPEIS_DA_APLICACAO:
+            return motivo
+    return None
+
+
+def _fora_da_lista(st):
+    """None se o comando de primeiro nivel e permitido sem aprovacao; senao o motivo."""
+    k = [_kw(t) for t in st]
+    n = len(st)
+    desc = " ".join(x.upper() for x in k[:3] if x) or "comando"
+    motivo = "fora da lista de construcoes permitidas sem aprovacao (%s)" % desc
+
+    def fim_ok(j):
+        return j == n
+
+    w0 = k[0]
+    # SET ROLE saas_owner / RESET ROLE / SET [LOCAL] search_path / parametros inofensivos
+    if w0 == "reset" and k[1:] == ["role"]:
+        return None
+    if w0 == "set":
+        j = 1
+        if j < n and k[j] in ("local", "session"):
+            j += 1
+        if j < n and k[j] == "role" and j + 2 == n and st[j + 1].tipo in ("word", "qident", "str") \
+                and st[j + 1].valor == PAPEL_DE_MIGRACAO:
+            return None
+        if j < n and k[j] in ("search_path",) and j + 1 < n and (k[j + 1] == "to" or _eh_op(st[j + 1], "=")):
+            itens = _partes_virgula(st, j + 2, n)
+            if all(len(it) == 1 and it[0].tipo in ("word", "qident", "str")
+                   and it[0].valor in SEARCH_PATH_PERMITIDO for it in itens):
+                return None
+            return "SET search_path fora de %s" % sorted(SEARCH_PATH_PERMITIDO)
+        if j < n and k[j] in PARAMETROS_SET_PERMITIDOS and j + 1 < n \
+                and (k[j + 1] == "to" or _eh_op(st[j + 1], "=")) and j + 3 == n \
+                and st[j + 2].tipo in ("num", "str", "word"):
+            return None
+        return motivo
+
+    if w0 in ("grant", "revoke"):
+        return _grant_fora_da_lista(st)
+
+    bloqueio = _conteudo_comum(st)
+
+    if w0 == "create":
+        j = 1
+        if j < n and k[j] == "table":
+            j += 1
+            j = _pula(st, j, "if", "not", "exists")
+            partes, j = _nome_em(st, j)
+            if not _alvo_saas(partes):
+                return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
+            if j >= n or not _eh_op(st[j], "("):
+                return motivo + ": CREATE TABLE sem lista de colunas (AS, PARTITION OF, OF tipo)"
+            j = _fecha(st, j)
+            if j is not None and j < n and k[j] == "with" and j + 1 < n and _eh_op(st[j + 1], "("):
+                j = _fecha(st, j + 1)
+            if j is None or not fim_ok(j):
+                return motivo + ": CREATE TABLE com clausula apos as colunas (INHERITS, PARTITION BY...)"
+            return bloqueio
+        if j < n and k[j] in ("unique", "index"):
+            j = _pula(st, j, "unique")
+            if j >= n or k[j] != "index":
+                return motivo
+            j = _pula(st, j + 1, "concurrently")
+            j = _pula(st, j, "if", "not", "exists")
+            if j < n and k[j] != "on":
+                j += 1  # nome do indice (sem schema)
+            if j >= n or k[j] != "on":
+                return motivo
+            j = _pula(st, j + 1, "only")
+            partes, j = _nome_em(st, j)
+            if not _alvo_saas(partes):
+                return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
+            return bloqueio
+        if j < n and k[j] == "sequence":
+            j = _pula(st, j + 1, "if", "not", "exists")
+            partes, j = _nome_em(st, j)
+            if not _alvo_saas(partes):
+                return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
+            return bloqueio
+        if j < n and k[j] == "type":
+            partes, j = _nome_em(st, j + 1)
+            if not _alvo_saas(partes):
+                return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
+            if k[j:j + 2] == ["as", "enum"] and j + 2 < n and _eh_op(st[j + 2], "("):
+                fim = _fecha(st, j + 2)
+                if fim == n and all(t.tipo == "str" or _eh_op(t, ",") for t in st[j + 3:fim - 1]):
+                    return None
+            return motivo
+        return motivo
+
+    if w0 == "alter":
+        if n > 1 and k[1] == "table":
+            j = _pula(st, 2, "if", "exists")
+            j = _pula(st, j, "only")
+            partes, j = _nome_em(st, j)
+            if not _alvo_saas(partes):
+                return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
+            for acao in _partes_virgula(st, j, n):
+                if not _acao_alter_table(acao):
+                    d = " ".join(x.valor.upper() for x in acao[:4] if x.tipo == "word") or "?"
+                    return motivo + ": acao de ALTER TABLE fora da lista (%s)" % d
+            return bloqueio
+        if n > 1 and k[1] == "index":
+            j = _pula(st, 2, "if", "exists")
+            partes, j = _nome_em(st, j)
+            if _alvo_saas(partes) and k[j:j + 2] == ["rename", "to"] and j + 3 == n:
+                return bloqueio
+            return motivo
+        if n > 1 and k[1] == "type":
+            partes, j = _nome_em(st, 2)
+            if not _alvo_saas(partes):
+                return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
+            if k[j:j + 2] == ["add", "value"]:
+                j = _pula(st, j + 2, "if", "not", "exists")
+                if j < n and st[j].tipo == "str":
+                    j += 1
+                    if j < n and k[j] in ("before", "after") and j + 1 < n and st[j + 1].tipo == "str":
+                        j += 2
+                    if j == n:
+                        return None
+            return motivo
+        return motivo
+
+    if w0 == "drop" and n > 1 and k[1] == "index":
+        j = _pula(st, 2, "concurrently")
+        j = _pula(st, j, "if", "exists")
+        for item in _partes_virgula(st, j, n):
+            if item and _kw(item[-1]) == "restrict":
+                item = item[:-1]
+            partes, fim = _nome_em(item, 0)
+            if not _alvo_saas(partes) or fim != len(item):
+                return motivo
+        return bloqueio
+
+    if w0 == "comment" and n > 2 and k[1] == "on" and k[2] in ("table", "column", "index", "sequence", "type"):
+        partes, j = _nome_em(st, 3)
+        if partes is None:
+            return motivo
+        if k[2] == "column":
+            ok = len(partes) == 2 or (len(partes) == 3 and partes[0] == SCHEMA_PERMITIDO)
+        else:
+            ok = _alvo_saas(partes)
+        if not ok:
+            return "DDL fora do schema saas (%s)" % ".".join(partes)
+        if k[j:j + 1] == ["is"] and j + 2 == n and (st[j + 1].tipo == "str" or k[j + 1] == "null"):
+            return None  # o literal e dado (e ainda passa pela reanalise)
+        return motivo
+
+    if w0 == "insert" and n > 1 and k[1] == "into":
+        partes, j = _nome_em(st, 2)
+        if not _alvo_saas(partes):
+            return "DDL fora do schema saas (%s)" % ".".join(partes or ["?"])
+        if partes[-1] not in TABELAS_REFERENCIA:
+            return motivo + ": INSERT fora das tabelas de referencia %s" % sorted(TABELAS_REFERENCIA)
+        if j < n and _eh_op(st[j], "("):
+            j = _fecha(st, j)
+        if j is None or j >= n or k[j] != "values":
+            return motivo + ": INSERT sem VALUES"
+        j += 1
+        while j is not None and j < n and _eh_op(st[j], "("):
+            j = _fecha(st, j)
+            if j is not None and j < n and _eh_op(st[j], ","):
+                j += 1
+        if j is not None and j < n and k[j:j + 2] == ["on", "conflict"]:
+            j += 2
+            if j < n and _eh_op(st[j], "("):
+                j = _fecha(st, j)
+            if j is not None and k[j:j + 2] == ["do", "nothing"]:
+                j += 2
+        if j != n:
+            return motivo + ": INSERT com clausula fora da lista (ON CONFLICT DO UPDATE, RETURNING...)"
+        return bloqueio
+
+    return motivo
 
 
 def _seq(toks, i, *esperado):
@@ -441,6 +861,74 @@ def _regras_comando(st, aninhado, achados):
                 acha(t.linha, "CREATE FUNCTION ... RETURNS %s (cria ou substitui funcao de gatilho)"
                      % palavras[i + 1].upper())
 
+        # --- quem acessa o que e como a seguranca e avaliada (ADR-0040, item 2) ---
+        if w in ("create", "alter", "drop"):
+            j = i + 1
+            if _seq(st, j, "or", "replace"):
+                j += 2
+            while _palavra(st[j] if j < n else None) in ("temp", "temporary", "recursive", "materialized",
+                                                          "trusted", "procedural", "unique"):
+                j += 1
+            obj = _palavra(st[j]) if j < n else None
+            if obj in ("function", "procedure", "routine", "aggregate"):
+                acha(t.linha, "%s %s (muda codigo usado por politica, gatilho ou papel)" % (w.upper(), obj.upper()))
+            elif obj in ("role", "user", "group"):
+                acha(t.linha, "%s %s (papel e atributos)" % (w.upper(), obj.upper()))
+            elif obj == "view":
+                acha(t.linha, "%s VIEW (visao contorna ou muda a RLS)" % w.upper())
+            elif obj == "extension":
+                acha(t.linha, "%s EXTENSION" % w.upper())
+            elif obj in ("schema", "database", "server", "language", "cast", "operator", "publication",
+                         "subscription", "tablespace", "conversion", "collation", "statistics",
+                         "transform", "access"):
+                acha(t.linha, "%s %s" % (w.upper(), obj.upper()))
+            elif obj == "foreign":
+                acha(t.linha, "%s FOREIGN ..." % w.upper())
+            elif obj == "default" and _seq(st, j + 1, "privileges"):
+                acha(t.linha, "ALTER DEFAULT PRIVILEGES")
+        if w in ("grant", "revoke") and not (not aninhado and i == 0 and _grant_fora_da_lista(st) is None):
+            acha(t.linha, "%s (privilegios)" % w.upper())
+        if w == "public" and i > 0 and palavras[i - 1] in ("to", "from") and t.tipo == "word":
+            acha(t.linha, "privilegio TO/FROM PUBLIC")
+        if w == "security" and _seq(st, i + 1, ("definer", "invoker")):
+            acha(t.linha, "SECURITY %s" % palavras[i + 1].upper())
+        if w == "security" and _seq(st, i + 1, "label"):
+            acha(t.linha, "SECURITY LABEL")
+        if w == "owner" and _seq(st, i + 1, "to"):
+            acha(t.linha, "OWNER TO (troca o dono)")
+        if w == "reassign" and _seq(st, i + 1, "owned"):
+            acha(t.linha, "REASSIGN OWNED")
+        if w in ("set", "reset"):
+            j = i + 1
+            if _palavra(st[j] if j < n else None) in ("local", "session") and not _seq(st, j, "session", "authorization"):
+                j += 1
+            alvo_set = _palavra(st[j]) if j < n else None
+            if alvo_set == "session" and _seq(st, j + 1, "authorization"):
+                acha(t.linha, "%s SESSION AUTHORIZATION" % w.upper())
+            elif alvo_set == "role" and w == "set":
+                papel = st[j + 1].valor if j + 1 < n and st[j + 1].tipo in ("word", "qident", "str") else None
+                if papel != PAPEL_DE_MIGRACAO:
+                    acha(t.linha, "SET ROLE %s (papel diferente de %s)" % (papel, PAPEL_DE_MIGRACAO))
+            elif alvo_set is not None and w == "set" and j + 1 < n and (
+                    _palavra(st[j + 1]) == "to" or _eh_op(st[j + 1], "=") or _eh_op(st[j + 1], ".")):
+                nome = alvo_set
+                if _eh_op(st[j + 1], ".") and j + 2 < n:
+                    nome = alvo_set + "." + (st[j + 2].valor or "")
+                if _parametro_de_seguranca(nome) and nome != "search_path":
+                    acha(t.linha, "SET %s (parametro de seguranca)" % nome)
+        if w == "set_config" and i + 2 < n and _eh_op(st[i + 1], "(") and st[i + 2].tipo == "str" \
+                and _parametro_de_seguranca(st[i + 2].valor):
+            acha(t.linha, "set_config('%s') (parametro de seguranca)" % st[i + 2].valor)
+        if w == "copy" and t.tipo == "word":
+            acha(t.linha, "COPY (PROGRAM, arquivo do servidor ou carga de dados)")
+        if w == "program" and t.tipo == "word":
+            acha(t.linha, "PROGRAM (executa comando do sistema)")
+        if w == "load" and t.tipo == "word" and i + 1 < n and st[i + 1].tipo == "str":
+            acha(t.linha, "LOAD (carrega biblioteca)")
+        if w in ("lo_import", "lo_export", "pg_read_file", "pg_read_binary_file", "pg_ls_dir",
+                 "pg_stat_file", "pg_file_write") and i + 1 < n and _eh_op(st[i + 1], "("):
+            acha(t.linha, "funcao de arquivo do servidor (%s)" % w)
+
         # escrita direta no catalogo do sistema (pg_trigger, pg_policy, pg_class, pg_settings...)
         alvo = None
         if w in ("update", "truncate"):
@@ -537,6 +1025,10 @@ def analisa(sql, aninhado=False, linha_base=0, profundidade=0, achados=None):
             t.linha += linha_base
     for st in _divide(toks):
         _regras_comando(st, aninhado, achados)
+        if not aninhado:
+            motivo = _fora_da_lista(st)
+            if motivo:
+                achados.append((st[0].linha, motivo))
     for t in toks:
         if t.tipo == "str" and t.valor.strip():
             analisa(t.valor, True, t.linha, profundidade + 1, achados)
@@ -636,7 +1128,8 @@ def main(argv):
             print("    linha %d: %s" % (linha, motivo))
     if recusadas:
         print("guarda: %d arquivo(s) recusado(s). Aprovacao: revisao do Red Team no PR e a linha "
-              "'<sha256>  <arquivo>' em src/main/resources/db/aprovacoes.sha256." % recusadas)
+              "'<sha256>  <arquivo>' em src/main/resources/db/aprovacoes.sha256, com aprovacao do dono "
+              "(CODEOWNERS)." % recusadas)
         return 1
     print("guarda: %d arquivo(s) conferido(s), nenhum recusado." % len(arquivos))
     return 0

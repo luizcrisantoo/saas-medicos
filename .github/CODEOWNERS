@@ -1,0 +1,22 @@
+# Donos de codigo (ADR-0040, item 5). Todo PR que toca estes caminhos exige a aprovacao do
+# dono; quem abre o PR nao conta como aprovacao propria. So vale com a protecao da branch
+# principal configurada no GitHub com "Require review from Code Owners" (passo manual do
+# Luiz, ver ADR-0040). Sem isso, este arquivo e so informativo.
+#
+# @SUBSTITUIR-PELO-USUARIO-DO-LUIZ e um marcador: trocar pelo usuario do GitHub do Luiz
+# (sem email) antes de ligar a protecao. Enquanto o marcador estiver aqui, o GitHub acusa
+# dono invalido e a regra nao protege nada.
+#
+# A ultima regra que casa vence: as linhas especificas ficam depois das gerais.
+
+/.github/                                    @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/.github/CODEOWNERS                          @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/scripts/ci/                                 @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/db/                                         @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+**/db/                                       @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/src/main/resources/db/                      @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/src/main/resources/db/aprovacoes.sha256     @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/infra/db/                                   @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/src/test/java/saasagenda/GuardaMigracaoTest.java  @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/.gitleaks.toml                              @SUBSTITUIR-PELO-USUARIO-DO-LUIZ
+/.gitleaksignore                             @SUBSTITUIR-PELO-USUARIO-DO-LUIZ

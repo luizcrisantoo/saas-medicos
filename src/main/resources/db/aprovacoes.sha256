@@ -1,8 +1,15 @@
 # Aprovacoes da guarda de migracao (scripts/ci/guarda-migracao.sh; ADR-0027, ADR-0039, ADR-0040).
 # Formato do sha256sum: "<sha256>  <arquivo>". A aprovacao vale para o conteudo exato
 # e para o nome: mudou um byte ou o nome, a guarda recusa de novo.
-# Quem aprova: revisao do Red Team registrada no PR. Toda linha nova leva uma
-# justificativa curta em comentario logo acima.
+# Quem aprova: revisao do Red Team registrada no PR e aprovacao do dono (CODEOWNERS; a
+# protecao da branch com code owners e obrigatoria, ADR-0040 item 7). Toda linha nova leva
+# uma justificativa curta em comentario logo acima.
+#
+# Reaprovacao na F5, tentativa 2 (lista de construcoes permitidas, ADR-0040 item 2): os seis
+# arquivos abaixo passaram a ser apontados tambem por CREATE FUNCTION ... SECURITY DEFINER,
+# GRANT/REVOKE (inclusive FROM PUBLIC), SET ROLE saas_funcoes, DO e DROP FUNCTION. Conteudo
+# inalterado (mesmo sha256); essas construcoes fazem parte do que foi revisado e aprovado em
+# F2, F3 e F4 (funcoes do papel saas_funcoes, privilegios por coluna do papel web, reversoes).
 #
 # V1 (modelo v2): CREATE POLICY, CREATE TRIGGER, funcoes de gatilho e o DO que liga
 # ENABLE/FORCE RLS por EXECUTE format(). Revisada na F2 (Revisor APROVADO; regressao das
