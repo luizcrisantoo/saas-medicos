@@ -2,7 +2,7 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 3 de 14.
+Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 4 de 14.
 
 ## Features
 
@@ -10,7 +10,7 @@ Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 vo
 |---|---|---|---|---|---|
 | F1 | Esqueleto Spring Boot 3 + Spring Modulith, 8 módulos e fronteiras | PRONTA (saída 0) | 1 | 6 de 6 | Verificador 6/6 VERDE; Revisor APROVADO |
 | F2 | Migrações Flyway do modelo v2, dono sem login, reversão e regressão | PRONTA (saída 0) | 1 | 9 de 9 | Verificador 9/9 VERDE; Revisor APROVADO com ressalvas não bloqueantes |
-| F3 | Gates de identidade: T-20, I-22, I-23 | EM CORREÇÃO (tentativa 2) | 1 | 4 de 4 | Verificador 4/4 VERDE; Revisor REPROVADO (5 itens) |
+| F3 | Gates de identidade: T-20, I-22, I-23 | PRONTA (saída 0, tentativa 2) | 2 | 4 de 4 | Verificador 4/4; Revisor APROVADO; nascimento NULL sobe ao Negócio |
 | F4 | Gates de banco: R-08, I-21, O3, envios após cancelamento, volume (E-09) | PENDENTE | 0 | 0 de 5 | baseline |
 | F5 | CI: guarda de migração (R-07, R-08) e GitHub Actions | PENDENTE | 0 | 0 de 9 | baseline |
 | F6 | Autenticação Cognito (resource server) e sessão de equipe no banco | PENDENTE | 0 | 0 de 7 | baseline |
@@ -125,3 +125,4 @@ e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca
 | 1 | 2026-11-17 | F1 | 61df927 | APROVADO | 6 VERDE 0 VERMELHO | n/a (sem banco ainda) | Sucesso F1 |
 | 2 | 2026-11-17 | F2 | 180e31a | APROVADO (ressalvas: DELETE no histórico Flyway na reversão; filtro de funções só saas_funcoes) | 9 VERDE 0 VERMELHO; F1 6/6 | F2.9 verde | Sucesso F2 |
 | 3 | 2026-11-17 | F3 | f9c7c3b | REPROVADO: fusão com nascimento NULL, coalesce I-22, I-23 aberto em leitura/reagendamento, telefone_contato legível | 4 VERDE; F2 9/9; F1 6/6 | F2.9 verde | Devolver ao Executor (aceite verde não basta) |
+| 4 | 2026-11-17 | F3 | 80e057e (após bloqueio resolvido: Arquiteto 00e1faa adaptou só a semente da regressão) | APROVADO (obs.: ramo PACIENTE sem encaminhamento_id usa paciente.telefone, cuidar em F4) | 4 VERDE; F2 9/9; F1 6/6 | F2.9 verde | Sucesso F3 |
