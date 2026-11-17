@@ -42,6 +42,11 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.transaction.annotation.Transactional;
+import com.zaxxer.hikari.HikariDataSource;
+import saasagenda.identidade.ConsultaContexto;
 import saasagenda.identidade.ContextoAcesso;
 import saasagenda.identidade.ContextoBanco;
 import saasagenda.identidade.JobsApi;
@@ -92,6 +97,36 @@ class ContextoPoolTest {
 
     @Autowired
     ContextoBanco contextoBanco;
+
+    @Autowired
+    ServicoComum servicoComum;
+
+    /** Um serviço qualquer com {@code @Transactional} e o {@code JdbcTemplate} padrão, sem contexto. */
+    static class ServicoComum {
+        private final JdbcTemplate jdbc;
+
+        ServicoComum(JdbcTemplate jdbc) {
+            this.jdbc = jdbc;
+        }
+
+        @Transactional
+        public Integer contaEventos() {
+            return jdbc.queryForObject("SELECT count(*) FROM saas.evento_auditoria", Integer.class);
+        }
+
+        @Transactional
+        public String sessaoAtual() {
+            return jdbc.queryForObject("SELECT session_user::text", String.class);
+        }
+    }
+
+    @TestConfiguration
+    static class Config {
+        @Bean
+        ServicoComum servicoComum(JdbcTemplate jdbc) {
+            return new ServicoComum(jdbc);
+        }
+    }
 
     private final HttpClient http = HttpClient.newHttpClient();
 
@@ -202,7 +237,8 @@ class ContextoPoolTest {
 
     @Test
     void poolDeUmaConexaoAlternadoNuncaHerdaContexto() throws Exception {
-        assertThat(contexto.getBean(com.zaxxer.hikari.HikariDataSource.class).getMaximumPoolSize()).isEqualTo(1);
+        assertThat(contexto.getBeanNamesForType(HikariDataSource.class)).isEmpty();
+        assertThat(cru().getMaximumPoolSize()).isEqualTo(1);
         List<String> falhas = new ArrayList<>();
         for (int i = 0; i < 40; i++) {
             confere(i % 5, falhas);
@@ -237,40 +273,121 @@ class ContextoPoolTest {
     }
 
     @Test
-    void contextoResidualNaConexaoFalhaFechado() throws Exception {
-        // Simula um SET de sessão que vazou na única conexão do pool (o código nunca faz isso).
-        try (Connection c = dataSource.getConnection(); var ps = c.prepareStatement(
-                "SELECT set_config('app.sessao', ?, false), set_config('app.clinica_id', ?, false), "
-                        + "set_config('app.papel', 'ADMIN', false)")) {
-            ps.setString(1, ADMIN_A);
-            ps.setString(2, CLINICA_A.toString());
-            ps.executeQuery().close();
-        }
-        try {
-            HttpResponse<String> r = auditoria(ADMIN_B, CLINICA_B, "ADMIN");
-            assertThat(r.statusCode()).isIn(401, 403);
-            assertThat(r.body()).doesNotContain(EVENTOS_A.iterator().next());
-            assertThat(auditoria(null, CLINICA_A, "ADMIN").statusCode()).isEqualTo(401);
-        } finally {
-            try (Connection c = dataSource.getConnection(); var ps = c.prepareStatement(
-                    "SELECT set_config('app.sessao', '', false), set_config('app.clinica_id', '', false), "
-                            + "set_config('app.papel', '', false)")) {
-                ps.executeQuery().close();
+    void conexaoSujaEhDescartadaDoPoolENaoSoRecusada() throws Exception {
+        // Simula um SET de sessão que vazou na única conexão do pool (o código nunca faz isso),
+        // pela conexão crua do Hikari: pelo pool guardado nem isso é possível sem contexto.
+        int pidSujo;
+        try (Connection c = cru().getConnection(); Statement s = c.createStatement()) {
+            s.execute("SELECT set_config('app.sessao', 'residuo', false), "
+                    + "set_config('app.clinica_id', '" + CLINICA_A + "', false), set_config('app.papel', 'ADMIN', false)");
+            try (ResultSet rs = s.executeQuery("SELECT pg_backend_pid()")) {
+                rs.next();
+                pidSujo = rs.getInt(1);
             }
         }
+        HttpResponse<String> r = auditoria(ADMIN_B, CLINICA_B, "ADMIN");
+        assertThat(r.statusCode()).isIn(401, 403);
+        assertThat(r.body()).doesNotContain(EVENTOS_A.iterator().next());
+        // Sem limpeza manual: a conexão suja saiu do pool e a seguinte já vem limpa.
         assertThat(ids(auditoria(ADMIN_A, CLINICA_A, "ADMIN"))).isEqualTo(EVENTOS_A);
+        assertThat(ids(auditoria(ADMIN_B, CLINICA_B, "ADMIN"))).isEqualTo(EVENTOS_B);
+        assertThat(contextoDaConexaoForaDeTransacao()).isEqualTo("||");
+        int pidNovo = new JdbcTemplate(cru()).queryForObject("SELECT pg_backend_pid()", Integer.class);
+        assertThat(pidNovo).isNotEqualTo(pidSujo);
+        boolean fechou = false;
+        for (int i = 0; i < 50 && !fechou; i++) {
+            try (Connection c = superusuario(); Statement s = c.createStatement();
+                    ResultSet rs = s.executeQuery("SELECT count(*) FROM pg_stat_activity WHERE pid = " + pidSujo)) {
+                rs.next();
+                fechou = rs.getInt(1) == 0;
+            }
+            if (!fechou) {
+                Thread.sleep(100);
+            }
+        }
+        assertThat(fechou).as("conexao suja fechada no servidor").isTrue();
+    }
+
+    @Test
+    void transactionalComumSemContextoNaoConsegueConsultar() {
+        // Falha fechada: SQL por saas_app fora do executor do ContextoBanco é recusado pelo pool.
+        assertThatThrownBy(() -> servicoComum.contaEventos())
+                .rootCause().isInstanceOf(SQLException.class)
+                .satisfies(e -> assertThat(((SQLException) e).getSQLState()).isEqualTo("42501"));
+        assertThatThrownBy(() -> servicoComum.sessaoAtual()).rootCause().isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> app.queryForObject("SELECT 1", Integer.class)).rootCause().isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> {
+            try (Connection c = dataSource.getConnection(); Statement s = c.createStatement()) {
+                s.executeQuery("SELECT 1").close();
+            }
+        }).isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> dataSource.unwrap(HikariDataSource.class)).isInstanceOf(SQLException.class);
+        assertThatThrownBy(() -> {
+            try (Connection c = dataSource.getConnection()) {
+                c.unwrap(Connection.class);
+            }
+        }).isInstanceOf(SQLException.class);
+        // Nem dentro da transação com contexto: só o executor entregue a ela consulta.
+        assertThatThrownBy(() -> contextoBanco.emTransacao(ContextoAcesso.daEquipe(ADMIN_A, CLINICA_A, "ADMIN"),
+                consulta -> app.queryForObject("SELECT count(*) FROM saas.evento_auditoria", Integer.class)))
+                .rootCause().isInstanceOf(SQLException.class);
+        // O token não vale fora da transação em que nasceu, nem em outra transação.
+        ConsultaContexto[] vazado = new ConsultaContexto[1];
+        contextoBanco.emTransacao(ContextoAcesso.daEquipe(ADMIN_A, CLINICA_A, "ADMIN"), consulta -> {
+            vazado[0] = consulta;
+            return null;
+        });
+        assertThatThrownBy(() -> vazado[0].tipoAtor()).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> contextoBanco.emTransacao(ContextoAcesso.daEquipe(ADMIN_B, CLINICA_B, "ADMIN"),
+                consulta -> vazado[0].queryForList("SELECT id FROM saas.evento_auditoria", String.class)))
+                .isInstanceOf(IllegalStateException.class);
+        // Controle positivo: pelo executor da própria transação a consulta passa.
+        Integer n = contextoBanco.emTransacao(ContextoAcesso.daEquipe(ADMIN_A, CLINICA_A, "ADMIN"),
+                consulta -> consulta.queryForObject("SELECT count(*)::int FROM saas.evento_auditoria", Integer.class));
+        assertThat(n).isEqualTo(EVENTOS_A.size());
+    }
+
+    @Test
+    void auditoriaPaginaComLimiteConfiguravelECursor() throws Exception {
+        HttpResponse<String> p1 = auditoria(ADMIN_A, CLINICA_A, "ADMIN", "?limite=2");
+        assertThat(ids(p1)).hasSize(2);
+        String cursor = p1.headers().firstValue("X-Proxima-Pagina").orElseThrow();
+        HttpResponse<String> p2 = auditoria(ADMIN_A, CLINICA_A, "ADMIN", "?limite=2&depoisDe=" + cursor);
+        assertThat(ids(p2)).hasSize(1);
+        assertThat(p2.headers().firstValue("X-Proxima-Pagina")).isEmpty();
+        Set<String> todos = new TreeSet<>(ids(p1));
+        todos.addAll(ids(p2));
+        assertThat(todos).isEqualTo(EVENTOS_A);
+        // Acima do teto é reduzido ao teto; sem parâmetro, a primeira página do contrato.
+        assertThat(ids(auditoria(ADMIN_A, CLINICA_A, "ADMIN", "?limite=100000"))).isEqualTo(EVENTOS_A);
+        assertThat(auditoria(ADMIN_A, CLINICA_A, "ADMIN").headers().firstValue("X-Proxima-Pagina")).isEmpty();
+        for (String ruim : List.of("?limite=0", "?limite=-1", "?limite=abc", "?depoisDe=x'%3B--")) {
+            assertThat(auditoria(ADMIN_A, CLINICA_A, "ADMIN", ruim).statusCode()).as(ruim).isEqualTo(400);
+        }
+        // Cursor de outra clínica não vaza nada.
+        String alheio = EVENTOS_B.iterator().next();
+        assertThat(ids(auditoria(ADMIN_A, CLINICA_A, "ADMIN", "?depoisDe=" + alheio))).isEmpty();
+    }
+
+    @Test
+    void saudeResponde200ComPoolGuardado() throws Exception {
+        HttpResponse<String> r = http.send(HttpRequest.newBuilder(
+                URI.create("http://127.0.0.1:" + porta + "/actuator/health")).GET().build(),
+                HttpResponse.BodyHandlers.ofString());
+        assertThat(r.statusCode()).isEqualTo(200);
+        assertThat(r.body()).contains("UP");
     }
 
     @Test
     void contextoEhUmPorTransacaoEExigeSessao() {
-        assertThatThrownBy(() -> contextoBanco.emTransacao(ContextoAcesso.daSessao(INEXISTENTE), () -> "x"))
+        assertThatThrownBy(() -> contextoBanco.emTransacao(ContextoAcesso.daSessao(INEXISTENTE), c -> "x"))
                 .isInstanceOf(ContextoBanco.SemSessaoException.class);
-        String tipo = contextoBanco.emTransacao(ContextoAcesso.daEquipe(ADMIN_A, CLINICA_A, "ADMIN"), () -> {
-            assertThatThrownBy(() -> contextoBanco.emTransacao(ContextoAcesso.daSessao(ADMIN_B), () -> "aninhado"))
+        String tipo = contextoBanco.emTransacao(ContextoAcesso.daEquipe(ADMIN_A, CLINICA_A, "ADMIN"), consulta -> {
+            assertThatThrownBy(() -> contextoBanco.emTransacao(ContextoAcesso.daSessao(ADMIN_B), c -> "aninhado"))
                     .isInstanceOf(IllegalStateException.class);
-            assertThat(app.queryForObject("SELECT current_setting('app.clinica_id', true)", String.class))
+            assertThat(consulta.queryForObject("SELECT current_setting('app.clinica_id', true)", String.class))
                     .isEqualTo(CLINICA_A.toString());
-            return contextoBanco.tipoAtor();
+            return consulta.tipoAtor();
         });
         assertThat(tipo).isEqualTo("EQUIPE");
         assertThat(contextoDaConexaoForaDeTransacao()).isEqualTo("||");
@@ -333,7 +450,7 @@ class ContextoPoolTest {
             rs.next();
             assertThat(rs.getInt(1)).isZero();
         }
-        assertThat(app.queryForObject("SELECT session_user::text", String.class)).isEqualTo("saas_app");
+        assertThat(new JdbcTemplate(cru()).queryForObject("SELECT session_user::text", String.class)).isEqualTo("saas_app");
     }
 
     // ------------------------------------------------------------- apoio
@@ -374,8 +491,19 @@ class ContextoPoolTest {
         }
     }
 
+    /** O Hikari cru por trás do pool guardado (só o teste chega a ele, por reflexão). */
+    private HikariDataSource cru() {
+        try {
+            java.lang.reflect.Field f = dataSource.getClass().getDeclaredField("pool");
+            f.setAccessible(true);
+            return (HikariDataSource) f.get(dataSource);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     private String contextoDaConexaoForaDeTransacao() {
-        return app.queryForObject("SELECT coalesce(current_setting('app.sessao', true), '') || '|' "
+        return new JdbcTemplate(cru()).queryForObject("SELECT coalesce(current_setting('app.sessao', true), '') || '|' "
                 + "|| coalesce(current_setting('app.clinica_id', true), '') || '|' "
                 + "|| coalesce(current_setting('app.papel', true), '')", String.class);
     }
@@ -395,7 +523,11 @@ class ContextoPoolTest {
     }
 
     private HttpResponse<String> auditoria(String token, UUID clinica, String papel) throws Exception {
-        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + porta + "/api/auditoria"));
+        return auditoria(token, clinica, papel, "");
+    }
+
+    private HttpResponse<String> auditoria(String token, UUID clinica, String papel, String consulta) throws Exception {
+        HttpRequest.Builder b = HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + porta + "/api/auditoria" + consulta));
         if (token != null) {
             b.header("Cookie", "SESSAO=" + token);
         }

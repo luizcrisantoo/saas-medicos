@@ -11,18 +11,19 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import saasagenda.identidade.ConsultaContexto;
 import saasagenda.identidade.ContextoAcesso;
 import saasagenda.identidade.ContextoBanco;
 import saasagenda.identidade.SessaoApi;
+import saasagenda.identidade.credencial.CredencialBanco;
 
 /**
  * Sessão verificável no banco (ADR-0023, ADR-0024).
  * <ul>
  * <li>Abertura: pool próprio com a credencial {@code saas_auth}, que só executa {@code sessao_equipe_abre}.
  * O pool não é bean {@link DataSource}: o pool padrão do Spring Boot continua sendo o de {@code saas_app}.</li>
- * <li>Consulta e encerramento: pool padrão ({@code saas_app}) pelo {@link ContextoBanco}; o token
+ * <li>Consulta e encerramento: pool padrão ({@code saas_app}) pelo executor de {@link ContextoBanco}; o token
  * entra só como parâmetro ligado em {@code set_config}, local à transação (ADR-0026, item 7).</li>
  * </ul>
  * Nada aqui grava log com token, sub ou mensagem do banco.
@@ -31,20 +32,19 @@ import saasagenda.identidade.SessaoApi;
 @Profile("web")
 class SessaoBanco implements SessaoApi, DisposableBean {
 
+    static final String ABRE = "SELECT saas.sessao_equipe_abre(?)";
+    static final String ENCERRA = "SELECT saas.sessao_encerra()::text";
+
     private final HikariDataSource auth;
-    private final JdbcTemplate app;
     private final ContextoBanco contexto;
 
     SessaoBanco(
             @Value("${saas.db.auth.url}") String url,
             @Value("${saas.db.auth.username}") String usuario,
             @Value("${saas.db.auth.password}") String senha,
-            JdbcTemplate app,
             ContextoBanco contexto) {
-        if (usuario == null || usuario.isBlank() || "saas_jobs".equals(usuario.trim())) {
-            // E-09: o processo web nunca usa a credencial de jobs.
-            throw new IllegalStateException("credencial de autenticacao invalida");
-        }
+        // E-09: regra única de credencial (lista positiva): este pool é só saas_auth.
+        CredencialBanco.exige(CredencialBanco.Uso.AUTH, usuario);
         HikariConfig cfg = new HikariConfig();
         cfg.setPoolName("saas-auth");
         cfg.setJdbcUrl(url);
@@ -54,7 +54,6 @@ class SessaoBanco implements SessaoApi, DisposableBean {
         cfg.setMinimumIdle(0);
         cfg.setAutoCommit(true);
         this.auth = new HikariDataSource(cfg);
-        this.app = app;
         this.contexto = contexto;
     }
 
@@ -65,7 +64,7 @@ class SessaoBanco implements SessaoApi, DisposableBean {
     @Override
     public Optional<String> abrirEquipe(String subOidc) {
         try (Connection c = auth.getConnection();
-                PreparedStatement ps = c.prepareStatement("SELECT saas.sessao_equipe_abre(?)")) {
+                PreparedStatement ps = c.prepareStatement(ABRE)) {
             ps.setString(1, subOidc);
             try (ResultSet rs = ps.executeQuery()) {
                 String token = rs.next() ? rs.getString(1) : null;
@@ -83,7 +82,7 @@ class SessaoBanco implements SessaoApi, DisposableBean {
             return Optional.empty();
         }
         try {
-            return Optional.ofNullable(contexto.emTransacao(ContextoAcesso.daSessao(tokenSessao), contexto::tipoAtor));
+            return Optional.ofNullable(contexto.emTransacao(ContextoAcesso.daSessao(tokenSessao), ConsultaContexto::tipoAtor));
         } catch (ContextoBanco.SemSessaoException e) {
             return Optional.empty();
         }
@@ -96,7 +95,7 @@ class SessaoBanco implements SessaoApi, DisposableBean {
         }
         try {
             contexto.emTransacao(ContextoAcesso.daSessao(tokenSessao),
-                    () -> app.queryForObject("SELECT saas.sessao_encerra()::text", String.class));
+                    consulta -> consulta.queryForObject(ENCERRA, String.class));
         } catch (ContextoBanco.SemSessaoException e) {
             // Sessao ja encerrada, vencida ou inexistente: nada a encerrar.
         }

@@ -26,7 +26,7 @@ class GuardaProcesso implements InitializingBean {
     public void afterPropertiesSet() {
         long ativos = Arrays.stream(ambiente.getActiveProfiles()).filter(PROCESSOS::contains).count();
         if (ativos != 1) {
-            throw new IllegalStateException("SAAS_PROCESSO deve ser exatamente um de " + PROCESSOS);
+            throw new IllegalStateException("o processo deve ser exatamente um de " + PROCESSOS);
         }
     }
 }

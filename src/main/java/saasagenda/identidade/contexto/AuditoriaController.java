@@ -22,7 +22,10 @@ import saasagenda.identidade.ContextoBanco;
  * {@code GET /api/auditoria} (spec da Fase 2, seção 3.4; ADR-0009): cookie de equipe, clínica em
  * {@code X-Clinica-Id} e papel em {@code X-Papel}. O banco decide pelo contexto aplicado na
  * transação: só o ADMIN vinculado à clínica vê eventos. Sem sessão válida: 401; cabeçalhos
- * malformados: 403; nenhuma resposta traz detalhe interno.
+ * malformados: 403; parâmetros de página inválidos: 400; nenhuma resposta traz detalhe interno.
+ * Paginação opcional ({@code AuditoriaApi}): {@code ?limite=N} (padrão e teto configuráveis) e
+ * {@code ?depoisDe=<id>}; havendo mais eventos, o cabeçalho {@code X-Proxima-Pagina} traz o cursor.
+ * Sem parâmetros, a resposta é a primeira página no formato do contrato ({@code [{"id": ...}]}).
  */
 @RestController
 @Profile("web")
@@ -55,12 +58,33 @@ class AuditoriaController {
             return status(HttpStatus.FORBIDDEN);
         }
         try {
-            List<Map<String, String>> eventos = contexto.emTransacao(
+            Integer limite;
+            UUID depoisDe;
+            try {
+                String l = req.getParameter("limite");
+                String d = req.getParameter("depoisDe");
+                limite = l == null ? null : Integer.valueOf(l.trim());
+                depoisDe = d == null ? null : UUID.fromString(d.trim());
+                if (limite != null && limite < 1) {
+                    return status(HttpStatus.BAD_REQUEST);
+                }
+            } catch (IllegalArgumentException e) {
+                return status(HttpStatus.BAD_REQUEST);
+            }
+            // O leitor só repassa o SQL fixo da auditoria ao executor desta transação.
+            AuditoriaApi.Pagina pagina = contexto.emTransacao(
                     ContextoAcesso.daEquipe(token, clinica, papel),
-                    () -> auditoria.consultar(clinica).stream()
-                            .map(id -> Map.of("id", id.toString()))
-                            .toList());
-            return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(eventos);
+                    consulta -> auditoria.consultar(
+                            (sql, parametros) -> consulta.queryForList(sql, UUID.class, parametros),
+                            clinica, depoisDe, limite));
+            List<Map<String, String>> eventos = pagina.ids().stream()
+                    .map(id -> Map.of("id", id.toString()))
+                    .toList();
+            ResponseEntity.BodyBuilder ok = ResponseEntity.ok().cacheControl(CacheControl.noStore());
+            if (pagina.proximo() != null) {
+                ok.header("X-Proxima-Pagina", pagina.proximo().toString());
+            }
+            return ok.body(eventos);
         } catch (ContextoBanco.SemSessaoException e) {
             return status(HttpStatus.UNAUTHORIZED);
         }

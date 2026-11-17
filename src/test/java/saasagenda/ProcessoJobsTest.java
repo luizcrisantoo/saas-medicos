@@ -115,6 +115,51 @@ class ProcessoJobsTest {
         assertThatThrownBy(() -> sobe(props).close()).isInstanceOf(Exception.class);
     }
 
+    @Test
+    void credencialDeJobsEhListaPositiva() {
+        for (String ruim : new String[] {"postgres", "saas_owner", "saas_funcoes", "saas_migracao", "saas_auth", "outro"}) {
+            Map<String, Object> props = jobs();
+            props.put("SAAS_DB_JOBS_USERNAME", ruim);
+            assertThatThrownBy(() -> sobe(props).close()).as(ruim).isInstanceOf(Exception.class);
+        }
+    }
+
+    @Test
+    void poolEBatimentoSaoConfiguracaoNomeadaComPadrao() throws Exception {
+        try (ConfigurableApplicationContext ctx = sobe(jobs())) {
+            assertThat(poolMaximo(ctx)).isEqualTo(2);
+            assertThat(ctx.getEnvironment().getProperty("saas.jobs.batimento-segundos")).isEqualTo("30");
+        }
+        Map<String, Object> props = jobs();
+        props.put("saas.jobs.pool.maximo", "3");
+        props.put("saas.jobs.batimento-segundos", "5");
+        try (ConfigurableApplicationContext ctx = sobe(props)) {
+            assertThat(poolMaximo(ctx)).isEqualTo(3);
+        }
+        for (String[] ruim : new String[][] {{"saas.jobs.pool.maximo", "0"}, {"saas.jobs.pool.maximo", "11"},
+                {"saas.jobs.batimento-segundos", "4"}, {"saas.jobs.batimento-segundos", "301"}}) {
+            Map<String, Object> p = jobs();
+            p.put(ruim[0], ruim[1]);
+            assertThatThrownBy(() -> sobe(p).close()).as(ruim[0] + "=" + ruim[1]).isInstanceOf(Exception.class);
+        }
+    }
+
+    private static Map<String, Object> jobs() {
+        Map<String, Object> props = new TreeMap<>();
+        props.put("SAAS_PROCESSO", "jobs");
+        props.put("SAAS_DB_JOBS_URL", PG.getJdbcUrl());
+        props.put("SAAS_DB_JOBS_USERNAME", "saas_jobs");
+        props.put("SAAS_DB_JOBS_PASSWORD", SENHA);
+        return props;
+    }
+
+    private static int poolMaximo(ConfigurableApplicationContext ctx) throws Exception {
+        Object banco = ctx.getBean(JobsApi.class);
+        java.lang.reflect.Field f = banco.getClass().getDeclaredField("jobs");
+        f.setAccessible(true);
+        return ((com.zaxxer.hikari.HikariDataSource) f.get(banco)).getMaximumPoolSize();
+    }
+
     private static void confereSoJobs(ConfigurableApplicationContext ctx) throws Exception {
         assertThat(ctx).isNotInstanceOf(WebApplicationContext.class);
         assertThat(ctx.getBeanNamesForType(DataSource.class)).isEmpty();
