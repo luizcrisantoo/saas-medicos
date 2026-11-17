@@ -2,7 +2,7 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 9 de 14.
+Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 10 de 14.
 
 ## Features
 
@@ -13,7 +13,7 @@ Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 vo
 | F3 | Gates de identidade: T-20, I-22, I-23 | PRONTA (saída 0, tentativa 2) | 2 | 4 de 4 | Verificador 4/4; Revisor APROVADO; nascimento NULL sobe ao Negócio |
 | F4 | Gates de banco: R-08, I-21, O3, envios após cancelamento, volume (E-09) | PRONTA (saída 0, tentativa 2) | 2 | 5 de 5 | Verificador 5/5; Revisor APROVADO com ressalvas (ruído de GRANT na migração; telefone sem DDD contorna volume; custo quadrático do preparo) |
 | F5 | CI: guarda de migração (R-07, R-08) e GitHub Actions | PRONTA (saída 0, tentativa 3) | 3 | 9 de 9 | Verificador 9/9; Revisor APROVADO com ressalvas |
-| F6 | Autenticação Cognito (resource server) e sessão de equipe no banco | PENDENTE | 0 | 0 de 7 | baseline |
+| F6 | Autenticação Cognito (resource server) e sessão de equipe no banco | PRONTA (saída 0) | 1 | 7 de 7 | Verificador 7/7; Revisor APROVADO com ressalvas |
 | F7 | Contexto por transação, pool seguro, I-20, credencial de jobs separada (E-09) | PENDENTE | 0 | 0 de 9 | baseline |
 | F8 | Storage S3 com SSE-KMS e URL assinada curta, auditoria de acesso | PENDENTE | 0 | 0 de 9 | baseline |
 | F9 | Base LGPD: consentimento pela API, termos e política em rascunho | PENDENTE | 0 | 0 de 7 | baseline |
@@ -140,3 +140,6 @@ e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca
 | 9 | 2026-11-17 | F5 | 1b934f7 (após Arquiteto 6400035 endurecer F5) | APROVADO (ressalvas: DEFAULT em tenant via ADD COLUMN/CREATE TABLE; aprovacoes depende do CODEOWNERS) | 9 VERDE; F1-F4 verdes | F2.9 verde | Sucesso F5 |
 - P5 (F5, Revisor): ADD COLUMN clinica_id DEFAULT x e CREATE TABLE com DEFAULT em tenant passam na guarda (ADR-0040).
 - P6 (F5, Negócio): usuário do GitHub do Luiz para o CODEOWNERS e proteção de branch com code owners ligada; até lá aprovacoes.sha256 pode ser autoaprovado no PR.
+| 10 | 2026-11-17 | F6 | 19d7241 | APROVADO (ressalvas: refresh de JWKS sem limite por kid desconhecido; 12 h duplicado cookie/banco; SAAS_PROCESSO=jobs para F7) | 7 VERDE; F1-F5 verdes | F2.9 verde | Sucesso F6 |
+- P7 (F6, Revisor): refresh da JWKS a cada kid desconhecido sem limite de taxa (ConfiguracaoAutenticacao.java:98).
+- P8 (F6, Revisor): duração de 12 h da sessão duplicada no cookie e no banco.
