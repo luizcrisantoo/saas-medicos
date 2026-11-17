@@ -32,6 +32,14 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.modulith:spring-modulith-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    // Teste das migracoes (F2): Flyway real contra PostgreSQL 16 em Testcontainers.
+    // So no classpath de teste: a aplicacao nao migra o banco (ADR-0027).
+    testImplementation("org.flywaydb:flyway-core")
+    testImplementation("org.flywaydb:flyway-database-postgresql")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:junit-jupiter")
+    testRuntimeOnly("org.postgresql:postgresql")
 }
 
 tasks.withType<JavaCompile>().configureEach {
@@ -41,4 +49,5 @@ tasks.withType<JavaCompile>().configureEach {
 
 tasks.test {
     useJUnitPlatform()
+    environment("TESTCONTAINERS_RYUK_DISABLED", "true")
 }
