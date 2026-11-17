@@ -2,14 +2,14 @@
 
 Memória entre iterações (spec: `docs/fase2/spec.md`, seção 2). O Orquestrador atualiza esta tabela a cada iteração; o Executor não edita a seção de checksums.
 
-Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 1 de 14.
+Limites: 14 iterações no total, 3 tentativas por feature, estagnação de 3 voltas. Iterações usadas: 2 de 14.
 
 ## Features
 
 | Feature | Título | Status | Tentativas | Critérios VERDE | Último resultado |
 |---|---|---|---|---|---|
 | F1 | Esqueleto Spring Boot 3 + Spring Modulith, 8 módulos e fronteiras | PRONTA (saída 0) | 1 | 6 de 6 | Verificador 6/6 VERDE; Revisor APROVADO |
-| F2 | Migrações Flyway do modelo v2, dono sem login, reversão e regressão | PENDENTE | 0 | 0 de 9 | baseline |
+| F2 | Migrações Flyway do modelo v2, dono sem login, reversão e regressão | PRONTA (saída 0) | 1 | 9 de 9 | Verificador 9/9 VERDE; Revisor APROVADO com ressalvas não bloqueantes |
 | F3 | Gates de identidade: T-20, I-22, I-23 | PENDENTE | 0 | 0 de 4 | baseline |
 | F4 | Gates de banco: R-08, I-21, O3, envios após cancelamento, volume (E-09) | PENDENTE | 0 | 0 de 5 | baseline |
 | F5 | CI: guarda de migração (R-07, R-08) e GitHub Actions | PENDENTE | 0 | 0 de 9 | baseline |
@@ -32,7 +32,7 @@ Linha de base: `docs/fase2/aceite-baseline.log` (0 VERDE, 82 VERMELHO).
 
 Arquivos protegidos: `acceptance/**` (menos `.bin`, `.tmp`, `__pycache__` e o build do harness, ignorados pelo git), `docs/arquitetura/modelo-v2.sql`, `docs/arquitetura/evidencias/*.sql` e `*.sh`, `docs/seguranca/evidencias/*.sql`.
 
-- sha256 agregado (sha256 da lista abaixo, gerada pelo comando de conferência): `f176327d67cf9287ed2b817053e387d8d9e10dfbc61644ecf96e24fe6f62fbb8`
+- sha256 agregado: substituído pelo Orquestrador. A conferência oficial usa uma cópia da lista guardada fora do repositório (fora do alcance do Executor); o agregado antigo `f176327d…` incluía NOTAS-ANTI-HACK.md, que saiu do repo.
 - `docs/fase2/spec.md`: `0e2cd90c0165a5e818321945c7e1fe2baed83994add545cf31d35872ba4eb25f`
 - `docs/fase2/aceite-baseline.log`: `ee28a9c8a125acfbf60ce5cc4abc75d3d0badb17d405e282ecace2206ed6dc43`
 
@@ -123,3 +123,4 @@ fc1aba9b9b83fb4fbbe801f664d94cd193a54770abfc4c55fe767d8a907c3578  docs/seguranca
 e9435795fbdc0d3971cef04546a20d9c725d9d45a3ef9ec103c4f6851d293c6e  docs/seguranca/evidencias/red-team-sondas.sql
 ```
 | 1 | 2026-11-17 | F1 | 61df927 | APROVADO | 6 VERDE 0 VERMELHO | n/a (sem banco ainda) | Sucesso F1 |
+| 2 | 2026-11-17 | F2 | 180e31a | APROVADO (ressalvas: DELETE no histórico Flyway na reversão; filtro de funções só saas_funcoes) | 9 VERDE 0 VERMELHO; F1 6/6 | F2.9 verde | Sucesso F2 |
