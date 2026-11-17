@@ -1,0 +1,96 @@
+== F1: Esqueleto Spring Boot 3 + Spring Modulith, 8 modulos e fronteiras verificadas ==
+VERDE     F1.1     Gradle wrapper 8.14.3 no repositorio e bytecode Java 21
+VERDE     F1.2     ./gradlew build passa (testes do Executor inclusos)
+VERDE     F1.3     bootJar executavel com Spring Boot 3.x e Start-Class saasagenda.Aplicacao
+VERDE     F1.4     teste de aceite injetado: verify() do Modulith, exatamente os 8 modulos, allowedDependencies iguais ao mapa, nenhum modulo OPEN
+VERDE     F1.5     mutante: identidade passa a usar a API de agenda; verify() do aceite e a suite do proprio Executor falham
+VERDE     F1.6     mutante: agenda usa tipo interno de clinicas; verify() do aceite falha
+== F2: Migracoes Flyway do modelo v2, papel dono sem login, reversao e regressao ==
+VERDE     F2.1     infra/db/bootstrap.sql roda como superusuario num PostgreSQL 16 limpo e nao contem senha
+VERDE     F2.2     Flyway real aplica db/migration como saas_migracao (sem superusuario); validate ok; segunda execucao aplica 0
+VERDE     F2.3     papeis: saas_owner e saas_funcoes sem login; saas_app, saas_jobs, saas_auth, saas_migracao com login, nenhum superusuario nem BYPASSRLS de login
+VERDE     F2.4     todo objeto do schema saas pertence a saas_owner (funcoes: saas_owner ou saas_funcoes); nenhum a papel com login
+VERDE     F2.5     membros: so saas_migracao assume saas_owner e saas_funcoes (sem heranca, sem admin); papeis da aplicacao nao assumem nenhum
+VERDE     F2.6     RLS ENABLE+FORCE em toda tabela de saas (exceto especialidade); jobs e auth sem privilegio em tabela; web sem DELETE/TRUNCATE; nada executavel por PUBLIC; SECURITY DEFINER com search_path fixo; rastreio desligado nos papeis de login; alerta de DDL ativo
+VERDE     F2.7     o schema contem todas as tabelas, colunas (com tipo) e gatilhos do modelo v2
+VERDE     F2.8     reversao: cada V<n> tem db/reversao/V<n>__*.sql; desfazer da ultima para a primeira reproduz exatamente o schema da versao anterior; migrar de novo funciona
+VERDE     F2.9     regressao: baterias -r2 (rls, independente r1 e r2, sondas-r2, Red Team r1, r1-novas, r2) sem falha fora das sondas neutras de gate
+== F3: Gates de identidade: T-20, I-22, I-23 ==
+VERDE     F3.1     T-20: CPF so identifica a mesma pessoa com nome normalizado e nascimento (quando os dois tem) iguais; caso do filho com CPF do responsavel vira paciente proprio; regras de identidade da Fase 1 mantidas
+VERDE     F3.2     T-20: na recepcao, qualquer coincidencia volta como sugestao, nunca como o id de um paciente existente
+VERDE     F3.3     I-22: o telefone informado no encaminhamento nunca e descartado em silencio; o link nunca vai ao telefone antigo
+VERDE     F3.4     I-23: depois da revogacao do COMPARTILHAR_CASO, busca, agendamento e consentimento da recepcao destino nao usam o vinculo nascido do encaminhamento
+== F4: Gates de banco: R-08, I-21, O3, envios pendentes apos cancelamento, alerta de volume (E-09) ==
+VERDE     F4.1     R-08: CREATE/ALTER/RENAME POLICY, CREATE TRIGGER, CREATE RULE, DISABLE TRIGGER, NO FORCE RLS e DROP POLICY em tabela de saas geram ALERTA_DDL_SAAS no log, mesmo com ROLLBACK
+VERDE     F4.2     I-21: funcoes SECURITY DEFINER nao respondem sem sessao (rede_ligada, transicao_cancelamento, auxiliares); catalogo com sessao continua
+VERDE     F4.3     O3: profissional sem canal verificado e sem usuario fica fora da visao de paciente e encaminhador; verificados e com conta continuam visiveis
+VERDE     F4.4     cancelar agendamento (direto ou em cascata por T11) derruba envios CONFIRMACAO_AGENDAMENTO e LEMBRETE pendentes; agendamento ativo continua
+VERDE     F4.5     E-09: a partir de 20 preparos para o mesmo destinatario em 1 hora, jobs_envio_prepara grava ALERTA_PREPARO_VOLUME no log, sem o contato
+== F5: CI: guarda de migracao (R-07, R-08) e GitHub Actions com testes, SAST, dependencias e segredos ==
+VERDE     F5.1     scripts/ci/guarda-migracao.sh existe e aceita as migracoes do repositorio com as aprovacoes registradas
+VERDE     F5.2     a guarda recusa migracao nao aprovada com DISABLE TRIGGER, NO FORCE/DISABLE RLS, DROP POLICY, DROP TRIGGER, session_replication_role, CREATE/ALTER POLICY, CREATE TRIGGER, GRANT em tabela sensivel ou nao classificada, DROP INDEX/CONSTRAINT, CREATE TABLE sem ENABLE e FORCE RLS ou SET/DROP DEFAULT em coluna de tenant, chave, storage ou status
+VERDE     F5.3     a guarda nao e enganada por variacoes de escrita do mesmo comando
+VERDE     F5.4     a guarda aceita migracao limpa (tabela com RLS, indice, coluna, GRANT em tabela nao sensivel, REVOKE)
+VERDE     F5.5     aprovacao presa ao sha256 do conteudo e ao nome do arquivo
+VERDE     F5.6     workflows passam no actionlint e rodam em pull_request
+VERDE     F5.7     pipeline tem testes (./gradlew), SAST, varredura de dependencias e de segredos
+VERDE     F5.8     pipeline roda a guarda da branch base sobre db/migration e db/reversao do PR, e a guarda aceita as reversoes do repositorio
+VERDE     F5.9     pipeline varre segredos; nenhum segredo no repositorio (gitleaks) e a configuracao do repositorio ainda detecta uma chave plantada
+== F6: Autenticacao Cognito (resource server) e sessao de equipe verificavel no banco ==
+VERDE     F6.1     aplicacao sobe com o ambiente do contrato (sem credencial de jobs) e /actuator/health responde 200
+VERDE     F6.2     access token valido (RS256, iss, client_id permitido, token_use=access, exp) abre sessao: cookie SESSAO HttpOnly/Secure/SameSite com o token da tabela sessao; GET /api/sessao devolve EQUIPE
+VERDE     F6.3     token com assinatura errada, kid desconhecido, iss ou client_id errados, expirado, token_use=id, alg none, HS256, malformado, sem client_id, usuario inexistente ou inativo: recusado e nenhuma sessao criada
+VERDE     F6.4     cookie ausente, desconhecido ou nao hexadecimal: 401 sem detalhe interno
+VERDE     F6.5     logout encerra a sessao no banco e o cookie deixa de valer
+VERDE     F6.6     nenhum JWT nem cookie nos logs da aplicacao e do PostgreSQL
+VERDE     F6.7     sessao aberta pela credencial saas_auth; consultas da web por saas_app
+== F7: Contexto de sessao por transacao, pool seguro, I-20 e credencial de jobs separada (E-09) ==
+VERDE     F7.1     GET /api/auditoria: ADMIN de cada clinica ve so a auditoria da propria clinica
+VERDE     F7.2     papel declarado sem vinculo, clinica alheia, sem clinica ou sem sessao: nada de auditoria
+VERDE     F7.3     com pool de 1 conexao, requisicoes alternadas e concorrentes nunca herdam contexto de outra
+VERDE     F7.4     I-20: nenhum token de sessao no log do PostgreSQL (log_statement=all) nem em pg_stat_statements
+VERDE     F7.5     o contexto e gravado por set_config com parametro ligado e local a transacao (nada de SET ou literal)
+VERDE     F7.6     I-20: o codigo-fonte nao interpola contexto de sessao em SQL
+VERDE     F7.7     I-20: um mutante com token interpolado no SQL faz a suite do proprio Executor falhar
+VERDE     F7.8     E-09: o processo web, mesmo com a credencial de jobs no ambiente, nunca conecta como saas_jobs
+VERDE     F7.9     E-09: o processo de jobs (SAAS_PROCESSO=jobs) sobe so com a credencial de jobs e conecta como saas_jobs, nunca como saas_app ou saas_auth
+== F8: Storage S3 com SSE-KMS e URL assinada curta, validacao de tipo e tamanho, auditoria de acesso a dado de saude ==
+VERDE     F8.1     upload valido: anexo registrado (PENDENTE) e URL PUT SigV4 de ate 5 min, sa-east-1, no bucket do ambiente, na chave opaca, com SSE-KMS assinado
+VERDE     F8.2     tipo fora de PDF, JPEG e PNG recusado sem registro nem URL
+VERDE     F8.3     tamanho acima de 20 MiB, zero ou negativo recusado; limites aceitos
+VERDE     F8.4     upload em encaminhamento que o ator nao ve ou sem sessao recusado
+VERDE     F8.5     download de anexo LIMPO devolve URL GET assinada de ate 5 min para a chave do anexo
+VERDE     F8.6     anexo PENDENTE, INFECTADO, alheio ou sem sessao: recusado sem URL
+VERDE     F8.7     cada download concedido grava um EventoAuditoria do anexo
+VERDE     F8.8     se a auditoria falhar, nenhuma URL e entregue (acesso sem registro nao acontece)
+VERDE     F8.9     nenhuma URL assinada no log da aplicacao
+== F9: Base LGPD: consentimento conceder e revogar pela API, termos e politica em rascunho para advogado ==
+VERDE     F9.1     GET /api/termos/consentimento/COMPARTILHAR_CASO devolve finalidade, versao e texto
+VERDE     F9.2     paciente concede pela API: registro com paciente da sessao, caso do link, clinica destino, versao e texto exato
+VERDE     F9.3     versao inexistente, outro caso, outra paciente, recepcao, sem sessao e campos forjados: recusados ou ignorados
+VERDE     F9.4     paciente lista os proprios consentimentos do caso
+VERDE     F9.5     paciente revoga pela API; revogar de novo nao reescreve a data; consentimento alheio intocado
+VERDE     F9.6     efeito no banco: clinica destino so ve o caso enquanto o consentimento esta ativo
+VERDE     F9.7     docs/legal: termos de uso e politica de privacidade em rascunho marcado, cobrindo dado de saude, direitos, encarregado, retencao e papeis (A DEFINIR), etica de cobranca e livre escolha
+== F10: Terraform AWS sa-east-1: 3 ambientes, RDS com PITR, S3+KMS, Secrets Manager, Cognito com MFA, alarmes e orcamento ==
+VERMELHO  F10.1    terraform fmt -check e validate passam em infra/terraform/ambientes/{dev,homolog,prod} (e conta, se existir)  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.2    terraform plan roda sem credenciais AWS reais (override de aceite) em todas as raizes, com duas cotacoes  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.3    os tres ambientes usam a regiao sa-east-1  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.4    RDS PostgreSQL 16 por ambiente: cifrado, privado, PITR, TLS obrigatorio (rds.force_ssl), logs exportados, protecao contra exclusao em prod, senha fora do codigo  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.5    S3 de anexos por ambiente: SSE-KMS com chave propria rotacionada, bloqueio publico total e politica que exige TLS e SSE-KMS  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.6    Secrets Manager: segredos separados de saas_app, saas_jobs, saas_auth e saas_migracao por ambiente, cifrados com KMS, sem valor no codigo  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.7    Cognito por ambiente: MFA TOTP habilitado, senha com 12+ caracteres, access token de ate 60 min, revogacao de token  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.8    alarmes do CloudWatch para as linhas ALERTA_DDL_SAAS e ALERTA_PREPARO_VOLUME do log do banco  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.9    ambientes isolados: buckets e instancias RDS com nomes distintos  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+VERMELHO  F10.10   orcamento mensal da conta coerente com o teto de R$ 800 (limite em USD = teto / cotacao), alertas real e previsto  [pre-requisito ausente: infra/terraform/ambientes/{dev,homolog,prod}]
+== F11: MFA obrigatorio para ADMIN e MEDICO (BLOQUEADA: B2) ==
+VERMELHO  F11.1    token de ADMIN ou MEDICO sem prova de MFA e recusado e nenhuma sessao e criada  [BLOQUEADO: decisao B2 pendente (docs/fase2/spec.md, secao 7)]
+VERMELHO  F11.2    token de ADMIN ou MEDICO com prova de MFA abre sessao; RECEPCAO continua sem exigencia  [BLOQUEADO: decisao B2 pendente (docs/fase2/spec.md, secao 7)]
+VERMELHO  F11.3    E-10 no banco: sessao_equipe_abre recebe e grava o fator e recusa ADMIN e MEDICO sem MFA  [BLOQUEADO: decisao B2 pendente (docs/fase2/spec.md, secao 7)]
+== F12: Menor com cadastro proprio ligado a responsavel, ADR-0037 (BLOQUEADA: B1) ==
+VERMELHO  F12.1    menor nasce como Paciente proprio, ligado a um ou mais responsaveis por vinculo explicito  [BLOQUEADO: decisao B1 pendente (docs/fase2/spec.md, secao 7)]
+VERMELHO  F12.2    CPF informado como do responsavel e gravado no responsavel, nunca no menor  [BLOQUEADO: decisao B1 pendente (docs/fase2/spec.md, secao 7)]
+VERMELHO  F12.3    link e codigo do caso do menor vao ao WhatsApp do responsavel  [BLOQUEADO: decisao B1 pendente (docs/fase2/spec.md, secao 7)]
+VERMELHO  F12.4    sessao do responsavel vale para o caso do menor e so para ele; nunca ha fusao de cadastro entre menor e responsavel  [BLOQUEADO: decisao B1 pendente (docs/fase2/spec.md, secao 7)]
+
+RESUMO: 65 VERDE, 17 VERMELHO
