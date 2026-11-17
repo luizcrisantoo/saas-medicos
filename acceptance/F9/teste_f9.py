@@ -48,7 +48,7 @@ row = sql(f"select paciente_id||'|'||finalidade||'|'||encaminhamento_id||'|'||cl
           f"from saas.consentimento where id = '{cid}'") if len(cid) == 36 else ""
 resultado("F9.2", r.status in (200, 201) and n_cons() == a + 1, f"paciente concede COMPARTILHAR_CASO pela API (status {r.status})")
 p = row.split("|") if row else []
-resultado("F9.2", p[:5] == [PA, "COMPARTILHAR_CASO", E, CB, versao] and len(p) == 8 and p[5] in ("SITE", "WHATSAPP") and p[6] == "t" and p[7] == "t",
+resultado("F9.2", p[:5] == [PA, "COMPARTILHAR_CASO", E, CB, versao] and len(p) == 8 and p[5] in ("SITE", "WHATSAPP") and p[6] == "true" and p[7] == "true",
           f"registro com paciente da sessao, caso, clinica destino, versao e o texto exato servido ({p[:6]})")
 resultado("F9.6", recepcao_ve_caso() == "1", "com consentimento ativo a clinica destino ve o caso")
 
