@@ -46,3 +46,4 @@ Status usados:
 | [ADR-0035](0035-segundo-elemento-paciente.md) | Segundo elemento antes de mostrar dado clínico ao paciente | Proposto: decisão do Luiz |
 | [ADR-0036](0036-telefone-contato-nao-identidade.md) | Telefone é contato, não identidade do paciente (critério de deduplicação) | Aceito na revisão da Fase 1 (rodada 2), sujeito ao Red Team |
 | [ADR-0037](0037-paciente-menor-responsavel.md) | Paciente menor com cadastro próprio ligado a responsável | Aceito |
+| [ADR-0038](0038-gates-identidade-fase2.md) | CPF só identifica com nome e nascimento; telefone de contato do caso; vínculo revogado não serve à recepção (substitui o item 2a do ADR-0036) | Proposto (Fase 2, F3), sujeito ao Red Team |
