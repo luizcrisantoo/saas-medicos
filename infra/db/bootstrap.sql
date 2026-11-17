@@ -90,22 +90,39 @@ ALTER DEFAULT PRIVILEGES FOR ROLE saas_funcoes REVOKE EXECUTE ON FUNCTIONS FROM 
 ALTER DEFAULT PRIVILEGES FOR ROLE saas_owner   REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
 
 -- ---------------------------------------------------------------------
--- 4. Alerta de DDL no log do servidor (Red Team R-07, ADR-0027)
+-- 4. Alerta de DDL no log do servidor (Red Team R-07 e R-08, ADR-0027, ADR-0039)
 --  Gatilho de evento so o superusuario cria; o dono das tabelas nao o desliga.
 --  A linha ALERTA_DDL_SAAS vira alarme fora do banco. Nunca traz contato, token
 --  ou codigo: so a etiqueta do comando, a identidade do objeto e os papeis.
+--  R-08: o PostgreSQL 16 informa schema nulo para politica, gatilho e regra, entao
+--  o filtro nao e so schema_name = 'saas': vale tambem a TABELA ALVO do objeto
+--  (pg_policy.polrelid, pg_trigger.tgrelid, pg_rewrite.ev_class, consultados direto
+--  no catalogo: o gatilho roda com o papel de quem faz o DDL, sem funcao auxiliar) e,
+--  no DROP, o primeiro nome do endereco do objeto. O log nao participa do ROLLBACK.
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.saas_alerta_ddl() RETURNS event_trigger LANGUAGE plpgsql
   SET search_path = pg_catalog, pg_temp AS
 $$ DECLARE r record;
 BEGIN
   IF TG_EVENT = 'sql_drop' THEN
-    FOR r IN SELECT * FROM pg_event_trigger_dropped_objects() WHERE schema_name = 'saas' LOOP
+    FOR r IN SELECT * FROM pg_event_trigger_dropped_objects()
+              WHERE schema_name = 'saas'
+                 OR address_names[1] = 'saas'
+                 OR object_identity LIKE '% on saas.%' LOOP
       RAISE LOG 'ALERTA_DDL_SAAS: DROP % % por session_user=% current_user=%',
         r.object_type, r.object_identity, session_user, current_user;
     END LOOP;
   ELSE
-    FOR r IN SELECT * FROM pg_event_trigger_ddl_commands() WHERE schema_name = 'saas' LOOP
+    FOR r IN SELECT * FROM pg_event_trigger_ddl_commands()
+              WHERE schema_name = 'saas'
+                 OR EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                             WHERE n.nspname = 'saas'
+                               AND c.oid = CASE classid
+                                 WHEN 'pg_catalog.pg_policy'::regclass  THEN (SELECT p.polrelid FROM pg_policy p WHERE p.oid = objid)
+                                 WHEN 'pg_catalog.pg_trigger'::regclass THEN (SELECT t.tgrelid FROM pg_trigger t WHERE t.oid = objid)
+                                 WHEN 'pg_catalog.pg_rewrite'::regclass THEN (SELECT w.ev_class FROM pg_rewrite w WHERE w.oid = objid)
+                               END)
+                 OR object_identity LIKE '% on saas.%' LOOP
       RAISE LOG 'ALERTA_DDL_SAAS: % % por session_user=% current_user=%',
         r.command_tag, r.object_identity, session_user, current_user;
     END LOOP;
